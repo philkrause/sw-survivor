@@ -20,6 +20,7 @@ const Game: React.FC = () => {
   const PLAYER_SIZE = 32;
   const ENEMY_SIZE = 32;
   const MOVEMENT_SPEED = 5;
+  const ENEMY_SPEED = 2; // Slower than player
   const SPAWN_INTERVAL = 2000; // 2 seconds
 
   // Player position state
@@ -62,6 +63,29 @@ const Game: React.FC = () => {
         };
     }
   };
+
+  // Update enemy positions
+  const updateEnemies = useCallback(() => {
+    setEnemies(prevEnemies => prevEnemies.map(enemy => {
+      // Calculate direction to player
+      const dx = playerPos.x - enemy.x;
+      const dy = playerPos.y - enemy.y;
+      
+      // Normalize direction vector
+      const distance = Math.sqrt(dx * dx + dy * dy);
+      if (distance === 0) return enemy; // Avoid division by zero
+      
+      const normalizedDx = dx / distance;
+      const normalizedDy = dy / distance;
+      
+      // Update position
+      return {
+        ...enemy,
+        x: enemy.x + normalizedDx * ENEMY_SPEED,
+        y: enemy.y + normalizedDy * ENEMY_SPEED
+      };
+    }));
+  }, [playerPos.x, playerPos.y]);
 
   // Spawn enemy effect
   useEffect(() => {
@@ -112,6 +136,7 @@ const Game: React.FC = () => {
     
     const gameLoop = () => {
       updatePosition();
+      updateEnemies();
       frameId = requestAnimationFrame(gameLoop);
     };
 
@@ -120,7 +145,7 @@ const Game: React.FC = () => {
     return () => {
       cancelAnimationFrame(frameId);
     };
-  }, [updatePosition]);
+  }, [updatePosition, updateEnemies]);
 
   // Handle keyboard input
   useEffect(() => {
