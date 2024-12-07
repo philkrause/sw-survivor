@@ -1,11 +1,19 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import { Stage, Layer, Rect } from 'react-konva';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import { Stage, Layer, Rect, Circle } from 'react-konva';
 
 // Types
 interface Enemy {
   id: number;
   x: number;
   y: number;
+}
+
+interface Projectile {
+  id: number;
+  x: number;
+  y: number;
+  directionX: number;
+  directionY: number;
 }
 
 /**
@@ -16,12 +24,15 @@ const Game: React.FC = () => {
   const STAGE_WIDTH = 1024;
   const STAGE_HEIGHT = 768;
   
-  // Constants for player and enemy
+  // Constants for game elements
   const PLAYER_SIZE = 32;
   const ENEMY_SIZE = 32;
+  const PROJECTILE_SIZE = 8;
   const MOVEMENT_SPEED = 5;
   const ENEMY_SPEED = 2; // Slower than player
+  const PROJECTILE_SPEED = 8; // Faster than player
   const SPAWN_INTERVAL = 2000; // 2 seconds
+  const ATTACK_INTERVAL = 500; // 0.5 seconds
 
   // Player position state
   const [playerPos, setPlayerPos] = useState({
@@ -32,6 +43,23 @@ const Game: React.FC = () => {
   // Enemy state
   const [enemies, setEnemies] = useState<Enemy[]>([]);
   const [nextEnemyId, setNextEnemyId] = useState(0);
+
+  // Projectile state
+  const [projectiles, setProjectiles] = useState<Projectile[]>([]);
+  const [nextProjectileId, setNextProjectileId] = useState(0);
+
+  // Use refs to access current state values in intervals without dependencies
+  const playerPosRef = useRef(playerPos);
+  const nextProjectileIdRef = useRef(nextProjectileId);
+
+  // Update refs when state changes
+  useEffect(() => {
+    playerPosRef.current = playerPos;
+  }, [playerPos]);
+
+  useEffect(() => {
+    nextProjectileIdRef.current = nextProjectileId;
+  }, [nextProjectileId]);
 
   // Track pressed keys
   const [keys, setKeys] = useState<{ [key: string]: boolean }>({});
@@ -64,6 +92,39 @@ const Game: React.FC = () => {
     }
   };
 
+  // Generate random direction for projectile
+  const generateRandomDirection = (): { directionX: number, directionY: number } => {
+    // Generate random angle in radians
+    const angle = Math.random() * Math.PI * 2;
+    
+    // Convert angle to direction vector
+    return {
+      directionX: Math.cos(angle),
+      directionY: Math.sin(angle)
+    };
+  };
+
+  // Fire projectile from player
+  const fireProjectile = useCallback(() => {
+    const direction = generateRandomDirection();
+    const currentPlayerPos = playerPosRef.current;
+    const currentProjectileId = nextProjectileIdRef.current;
+    
+    // Create projectile at player center
+    const projectileX = currentPlayerPos.x + PLAYER_SIZE / 2 - PROJECTILE_SIZE / 2;
+    const projectileY = currentPlayerPos.y + PLAYER_SIZE / 2 - PROJECTILE_SIZE / 2;
+    
+    setProjectiles(prev => [...prev, {
+      id: currentProjectileId,
+      x: projectileX,
+      y: projectileY,
+      directionX: direction.directionX,
+      directionY: direction.directionY
+    }]);
+    
+    setNextProjectileId(prev => prev + 1);
+  }, []);
+
   // Update enemy positions
   const updateEnemies = useCallback(() => {
     setEnemies(prevEnemies => prevEnemies.map(enemy => {
@@ -87,6 +148,26 @@ const Game: React.FC = () => {
     }));
   }, [playerPos.x, playerPos.y]);
 
+  // Update projectile positions
+  const updateProjectiles = useCallback(() => {
+    setProjectiles(prevProjectiles => {
+      // Move projectiles in their direction
+      const updatedProjectiles = prevProjectiles.map(projectile => ({
+        ...projectile,
+        x: projectile.x + projectile.directionX * PROJECTILE_SPEED,
+        y: projectile.y + projectile.directionY * PROJECTILE_SPEED
+      }));
+      
+      // Remove projectiles that are off-screen
+      return updatedProjectiles.filter(projectile => 
+        projectile.x > -PROJECTILE_SIZE &&
+        projectile.x < STAGE_WIDTH &&
+        projectile.y > -PROJECTILE_SIZE &&
+        projectile.y < STAGE_HEIGHT
+      );
+    });
+  }, []);
+
   // Spawn enemy effect
   useEffect(() => {
     const spawnEnemy = () => {
@@ -105,6 +186,15 @@ const Game: React.FC = () => {
       clearInterval(spawnInterval);
     };
   }, [nextEnemyId]);
+
+  // Auto attack effect - now using refs to avoid dependency on changing values
+  useEffect(() => {
+    const attackInterval = setInterval(fireProjectile, ATTACK_INTERVAL);
+    
+    return () => {
+      clearInterval(attackInterval);
+    };
+  }, [fireProjectile]);
 
   // Update player position based on pressed keys
   const updatePosition = useCallback(() => {
@@ -137,6 +227,7 @@ const Game: React.FC = () => {
     const gameLoop = () => {
       updatePosition();
       updateEnemies();
+      updateProjectiles();
       frameId = requestAnimationFrame(gameLoop);
     };
 
@@ -145,7 +236,7 @@ const Game: React.FC = () => {
     return () => {
       cancelAnimationFrame(frameId);
     };
-  }, [updatePosition, updateEnemies]);
+  }, [updatePosition, updateEnemies, updateProjectiles]);
 
   // Handle keyboard input
   useEffect(() => {
@@ -184,6 +275,7 @@ const Game: React.FC = () => {
             height={PLAYER_SIZE}
             fill="blue"
           />
+          
           {/* Enemies */}
           {enemies.map(enemy => (
             <Rect
@@ -193,6 +285,17 @@ const Game: React.FC = () => {
               width={ENEMY_SIZE}
               height={ENEMY_SIZE}
               fill="red"
+            />
+          ))}
+          
+          {/* Projectiles */}
+          {projectiles.map(projectile => (
+            <Circle
+              key={projectile.id}
+              x={projectile.x + PROJECTILE_SIZE / 2}
+              y={projectile.y + PROJECTILE_SIZE / 2}
+              radius={PROJECTILE_SIZE / 2}
+              fill="yellow"
             />
           ))}
         </Layer>
