@@ -1,5 +1,5 @@
 import React from 'react';
-import { Circle } from 'react-konva';
+import { Circle, Group, Rect } from 'react-konva';
 import { ENEMY_SIZE } from '../game/constants';
 
 interface EnemyProps {
@@ -12,16 +12,39 @@ interface EnemyProps {
  * Enemy component - will handle enemy rendering and behavior
  * This is just a placeholder for the future implementation
  */
-const Enemy: React.FC<EnemyProps> = ({ x, y, health: _ }) => {
+const Enemy: React.FC<EnemyProps> = ({ x, y, health }) => {
+  const HEALTH_BAR_HEIGHT = 5;
+  const MAX_HEALTH = 10; // Maximum enemy health
+  
   return (
-    <Circle
-      x={x}
-      y={y}
-      radius={ENEMY_SIZE / 2}
-      fill="red"
-      stroke="black"
-      strokeWidth={2}
-    />
+    <Group>
+      <Circle
+        x={x + ENEMY_SIZE / 2}
+        y={y + ENEMY_SIZE / 2}
+        radius={ENEMY_SIZE / 2}
+        fill="red"
+        stroke="black"
+        strokeWidth={2}
+      />
+      
+      {/* Health bar background */}
+      <Rect
+        x={x}
+        y={y + ENEMY_SIZE + 5}
+        width={ENEMY_SIZE}
+        height={HEALTH_BAR_HEIGHT}
+        fill="gray"
+      />
+      
+      {/* Health bar */}
+      <Rect
+        x={x}
+        y={y + ENEMY_SIZE + 5}
+        width={(health / MAX_HEALTH) * ENEMY_SIZE}
+        height={HEALTH_BAR_HEIGHT}
+        fill="red"
+      />
+    </Group>
   );
 };
 
