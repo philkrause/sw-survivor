@@ -17,6 +17,7 @@ interface Projectile {
   y: number;
   directionX: number;
   directionY: number;
+  pierceLeft: number; // How many more enemies this projectile can hit
 }
 
 /**
@@ -37,6 +38,7 @@ const Game: React.FC = () => {
   const SPAWN_INTERVAL = 2000; // 2 seconds
   const ATTACK_INTERVAL = 500; // 0.5 seconds
   const PROJECTILE_DAMAGE = 5; // Damage per projectile hit
+  const DEFAULT_PIERCE = 1; // Default number of enemies a projectile can hit
 
   // Player position and health state
   const [playerPos, setPlayerPos] = useState({
@@ -99,6 +101,7 @@ const Game: React.FC = () => {
   // Use refs to access current state values in intervals without dependencies
   const playerPosRef = useRef(playerPos);
   const projectilesRef = useRef(projectiles);
+  const enemiesRef = useRef(enemies);
 
   // Update refs when state changes
   useEffect(() => {
@@ -108,6 +111,10 @@ const Game: React.FC = () => {
   useEffect(() => {
     projectilesRef.current = projectiles;
   }, [projectiles]);
+
+  useEffect(() => {
+    enemiesRef.current = enemies;
+  }, [enemies]);
 
   const nextProjectileIdRef = useRef(nextProjectileId);
 
@@ -130,7 +137,8 @@ const Game: React.FC = () => {
       x: projectileX,
       y: projectileY,
       directionX: direction.directionX,
-      directionY: direction.directionY
+      directionY: direction.directionY,
+      pierceLeft: DEFAULT_PIERCE // Initialize with default pierce value
     }]);
     
     setNextProjectileId(prev => prev + 1);
@@ -176,8 +184,10 @@ const Game: React.FC = () => {
   // Update enemy positions
   const updateEnemies = useCallback(() => {
     const currentPlayerPos = playerPosRef.current;
+    const currentEnemies = enemiesRef.current;
     
-    setEnemies(prevEnemies => prevEnemies.map(enemy => {
+    // Map through enemies and update their positions
+    const updatedEnemies = currentEnemies.map(enemy => {
       // Calculate direction to player
       const dx = currentPlayerPos.x - enemy.x;
       const dy = currentPlayerPos.y - enemy.y;
@@ -195,8 +205,11 @@ const Game: React.FC = () => {
         x: enemy.x + normalizedDx * ENEMY_SPEED,
         y: enemy.y + normalizedDy * ENEMY_SPEED
       };
-    }));
-  }, []);
+    });
+    
+    // Only update state if positions have changed
+    setEnemies(updatedEnemies);
+  }, []); // Empty dependency array since we're using refs
 
   // Update projectile positions and check for collisions
   const updateProjectiles = useCallback(() => {
@@ -221,51 +234,86 @@ const Game: React.FC = () => {
 
   // Check for collisions between projectiles and enemies
   const checkCollisions = useCallback(() => {
+    // Get current states from refs
     const currentProjectiles = projectilesRef.current;
-    let projectilesToRemove: number[] = [];
+    const currentEnemies = enemiesRef.current;
     
-    // Using functional updates to ensure we have the latest state
-    setEnemies(currentEnemies => {
-      let updatedEnemies = [...currentEnemies];
-      let hasChanges = false;
+    // Keep track of all changes locally until we're ready to update state
+    let updatedProjectiles = [...currentProjectiles];
+    let updatedEnemies = [...currentEnemies];
+    let hasProjectileChanges = false;
+    let hasEnemyChanges = false;
+    
+    // Track which projectile IDs we've processed in this frame
+    const processedProjectiles = new Set<number>();
+    
+    // Process each projectile
+    for (let i = 0; i < currentProjectiles.length; i++) {
+      const projectile = currentProjectiles[i];
       
-      // Check each projectile against each enemy
-      currentProjectiles.forEach(projectile => {
-        currentEnemies.forEach((enemy, enemyIndex) => {
-          if (checkCollision(
-            projectile.x, projectile.y, PROJECTILE_SIZE, PROJECTILE_SIZE,
-            enemy.x, enemy.y, ENEMY_SIZE, ENEMY_SIZE
-          )) {
-            // Collision detected
-            if (!projectilesToRemove.includes(projectile.id)) {
-              projectilesToRemove.push(projectile.id);
-            }
+      // Skip if we already processed this projectile or if it has no pierce left
+      if (processedProjectiles.has(projectile.id) || projectile.pierceLeft <= 0) {
+        continue;
+      }
+      
+      // Check collision with each enemy
+      for (let j = 0; j < updatedEnemies.length; j++) {
+        const enemy = updatedEnemies[j];
+        
+        if (checkCollision(
+          projectile.x, projectile.y, PROJECTILE_SIZE, PROJECTILE_SIZE,
+          enemy.x, enemy.y, ENEMY_SIZE, ENEMY_SIZE
+        )) {
+          // Collision detected! 
+          processedProjectiles.add(projectile.id);
+          
+          // Reduce enemy health
+          const updatedHealth = enemy.health - PROJECTILE_DAMAGE;
+          hasEnemyChanges = true;
+          
+          if (updatedHealth <= 0) {
+            // Enemy is destroyed
+            updatedEnemies = updatedEnemies.filter(e => e.id !== enemy.id);
+          } else {
+            // Update enemy health
+            updatedEnemies[j] = {
+              ...enemy,
+              health: updatedHealth
+            };
+          }
+          
+          // Find this projectile in the updatedProjectiles and modify it
+          const projectileIndex = updatedProjectiles.findIndex(p => p.id === projectile.id);
+          if (projectileIndex !== -1) {
+            // Reduce projectile's pierce
+            const updatedPierce = updatedProjectiles[projectileIndex].pierceLeft - 1;
+            hasProjectileChanges = true;
             
-            // Reduce enemy health
-            const updatedHealth = enemy.health - PROJECTILE_DAMAGE;
-            hasChanges = true;
-            
-            if (updatedHealth <= 0) {
-              // Enemy is destroyed
-              updatedEnemies = updatedEnemies.filter(e => e.id !== enemy.id);
+            if (updatedPierce <= 0) {
+              // Mark for removal by removing from array
+              updatedProjectiles = updatedProjectiles.filter(p => p.id !== projectile.id);
             } else {
-              // Update enemy health
-              updatedEnemies[enemyIndex] = {
-                ...enemy,
-                health: updatedHealth
+              // Update pierce count
+              updatedProjectiles[projectileIndex] = {
+                ...updatedProjectiles[projectileIndex],
+                pierceLeft: updatedPierce
               };
             }
           }
-        });
-      });
-      
-      // Return updated enemies or original list if no changes
-      return hasChanges ? updatedEnemies : currentEnemies;
-    });
+          
+          // Break after hitting one enemy per projectile
+          break;
+        }
+      }
+    }
     
-    // If projectiles hit enemies, remove them
-    if (projectilesToRemove.length > 0) {
-      setProjectiles(prev => prev.filter(p => !projectilesToRemove.includes(p.id)));
+    // Update states if there were any changes
+    if (hasEnemyChanges) {
+      setEnemies(updatedEnemies);
+    }
+    
+    if (hasProjectileChanges) {
+      setProjectiles(updatedProjectiles);
     }
   }, []); // Empty dependency array since we're using refs
 
