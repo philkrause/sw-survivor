@@ -4,31 +4,29 @@ import {
   PLAYER_SIZE, 
   PROJECTILE_SIZE, 
   PROJECTILE_SPEED, 
-  ATTACK_INTERVAL, 
+  ATTACK_RATE, 
   DEFAULT_PIERCE,
   STAGE_WIDTH,
   STAGE_HEIGHT
 } from '../../game/constants';
-import { generateRandomDirection } from './gameUtils';
+import { generateRandomDirection, getEntityCenter, isOffScreen } from './gameUtils';
+import { clamp } from '../../utils/mathUtils';
+
+// Helper function to generate unique IDs that don't rely on React state
+let globalProjectileId = 1;
+const getUniqueProjectileId = () => globalProjectileId++;
 
 /**
  * Custom hook for managing projectile creation and movement
  */
 export const useProjectileSystem = (playerPosRef: React.RefObject<Position>) => {
   const [projectiles, setProjectiles] = useState<Projectile[]>([]);
-  const [nextProjectileId, setNextProjectileId] = useState(0);
-  
   const projectilesRef = useRef(projectiles);
-  const nextProjectileIdRef = useRef(nextProjectileId);
   
   // Update refs when state changes
   useEffect(() => {
     projectilesRef.current = projectiles;
   }, [projectiles]);
-  
-  useEffect(() => {
-    nextProjectileIdRef.current = nextProjectileId;
-  }, [nextProjectileId]);
   
   // Fire projectile from player
   const fireProjectile = useCallback(() => {
@@ -36,14 +34,16 @@ export const useProjectileSystem = (playerPosRef: React.RefObject<Position>) => 
     
     const direction = generateRandomDirection();
     const currentPlayerPos = playerPosRef.current;
-    const currentProjectileId = nextProjectileIdRef.current;
+    
+    // Get player center position using utility function
+    const playerCenter = getEntityCenter(currentPlayerPos, PLAYER_SIZE);
     
     // Create projectile at player center
-    const projectileX = currentPlayerPos.x + PLAYER_SIZE / 2 - PROJECTILE_SIZE / 2;
-    const projectileY = currentPlayerPos.y + PLAYER_SIZE / 2 - PROJECTILE_SIZE / 2;
+    const projectileX = playerCenter.x - PROJECTILE_SIZE / 2;
+    const projectileY = playerCenter.y - PROJECTILE_SIZE / 2;
     
     setProjectiles(prev => [...prev, {
-      id: currentProjectileId,
+      id: getUniqueProjectileId(),
       x: projectileX,
       y: projectileY,
       directionX: direction.directionX,
@@ -51,7 +51,7 @@ export const useProjectileSystem = (playerPosRef: React.RefObject<Position>) => 
       pierceLeft: DEFAULT_PIERCE
     }]);
     
-    setNextProjectileId(prev => prev + 1);
+    console.log('Projectile fired, ID:', globalProjectileId - 1);
   }, [playerPosRef]);
   
   // Update projectile positions
@@ -66,11 +66,7 @@ export const useProjectileSystem = (playerPosRef: React.RefObject<Position>) => 
         y: projectile.y + projectile.directionY * PROJECTILE_SPEED
       }))
       .filter(projectile => 
-        projectile.x >= -PROJECTILE_SIZE &&
-        projectile.x <= STAGE_WIDTH &&
-        projectile.y >= -PROJECTILE_SIZE &&
-        projectile.y <= STAGE_HEIGHT &&
-        projectile.pierceLeft > 0
+        !isOffScreen(projectile) && projectile.pierceLeft > 0
       );
     
     setProjectiles(updatedProjectiles);
@@ -78,9 +74,19 @@ export const useProjectileSystem = (playerPosRef: React.RefObject<Position>) => 
   
   // Set up auto-attack
   useEffect(() => {
-    const attackInterval = setInterval(fireProjectile, ATTACK_INTERVAL);
+    console.log('Setting up projectile attack interval:', ATTACK_RATE);
+    
+    // Fire immediately to test
+    fireProjectile();
+    
+    // Set up attack interval
+    const attackInterval = setInterval(() => {
+      console.log('Attack interval triggered');
+      fireProjectile();
+    }, ATTACK_RATE);
     
     return () => {
+      console.log('Cleaning up attack interval');
       clearInterval(attackInterval);
     };
   }, [fireProjectile]);
@@ -90,7 +96,7 @@ export const useProjectileSystem = (playerPosRef: React.RefObject<Position>) => 
     setProjectiles(prev => 
       prev.map(projectile => 
         projectile.id === projectileId
-          ? { ...projectile, pierceLeft: projectile.pierceLeft - 1 }
+          ? { ...projectile, pierceLeft: clamp(projectile.pierceLeft - 1, 0, projectile.pierceLeft) }
           : projectile
       ).filter(projectile => projectile.pierceLeft > 0)
     );
@@ -99,7 +105,6 @@ export const useProjectileSystem = (playerPosRef: React.RefObject<Position>) => 
   return {
     projectiles,
     updateProjectiles,
-    projectilesRef,
     fireProjectile,
     handleProjectileHit
   };

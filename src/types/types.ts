@@ -2,37 +2,7 @@
  * Type definitions for the application
  */
 
-// Game entity types
-export interface Enemy {
-  id: number;
-  x: number;
-  y: number;
-  health: number;
-}
-
-export interface Projectile {
-  id: number;
-  x: number;
-  y: number;
-  directionX: number;
-  directionY: number;
-  pierceLeft: number;
-}
-
-// Component props types
-export interface PlayerProps {
-  x: number;
-  y: number;
-  health: number;
-}
-
-export interface EnemyProps {
-  x: number;
-  y: number;
-  health: number;
-}
-
-// Position and movement types
+// Base types
 export interface Position {
   x: number;
   y: number;
@@ -41,4 +11,29 @@ export interface Position {
 export interface Direction {
   directionX: number;
   directionY: number;
-} 
+}
+
+// Base type for entities with health
+export interface EntityProps extends Position {
+  health: number;
+}
+
+// Game entity with ID type
+export interface GameEntity extends Position {
+  id: number;
+}
+
+// Game entity types
+export interface Enemy extends GameEntity {
+  health: number;
+}
+
+export interface Projectile extends GameEntity {
+  directionX: number;
+  directionY: number;
+  pierceLeft: number;
+}
+
+// Component props types
+export type PlayerProps = EntityProps;
+export type EnemyProps = EntityProps; 

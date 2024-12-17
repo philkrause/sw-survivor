@@ -1,14 +1,16 @@
 import React from 'react';
-import { Group, Circle, Rect, Line } from 'react-konva';
-import { PLAYER_SIZE, HEALTH_BAR_HEIGHT } from '../game/constants';
+import { Group, Circle, Line } from 'react-konva';
+import { PLAYER_SIZE, PLAYER_INITIAL_HEALTH } from '../game/constants';
 import { PlayerProps } from '../types/types';
+import HealthBar from './ui/HealthBar';
+import { calculateEntityCenter, calculateHealthBarPosition, generateRelativeLine } from '../utils/renderUtils';
 
 /**
  * Player component - will handle player rendering and movement
  */
 const Player: React.FC<PlayerProps> = ({ x, y, health }) => {
-  const centerX = x + PLAYER_SIZE / 2;
-  const centerY = y + PLAYER_SIZE / 2;
+  const { x: centerX, y: centerY } = calculateEntityCenter(x, y, PLAYER_SIZE);
+  const healthBarPos = calculateHealthBarPosition(x, y, PLAYER_SIZE);
   
   return (
     <Group>
@@ -42,18 +44,20 @@ const Player: React.FC<PlayerProps> = ({ x, y, health }) => {
       
       {/* Bee stripes */}
       <Line
-        points={[
-          centerX - PLAYER_SIZE/2, centerY - PLAYER_SIZE/5,
-          centerX + PLAYER_SIZE/2, centerY - PLAYER_SIZE/5
-        ]}
+        points={generateRelativeLine(
+          centerX, centerY,
+          -PLAYER_SIZE/2, -PLAYER_SIZE/5,
+          PLAYER_SIZE/2, -PLAYER_SIZE/5
+        )}
         stroke="#000000"
         strokeWidth={4}
       />
       <Line
-        points={[
-          centerX - PLAYER_SIZE/2, centerY + PLAYER_SIZE/8,
-          centerX + PLAYER_SIZE/2, centerY + PLAYER_SIZE/8
-        ]}
+        points={generateRelativeLine(
+          centerX, centerY,
+          -PLAYER_SIZE/2, PLAYER_SIZE/8,
+          PLAYER_SIZE/2, PLAYER_SIZE/8
+        )}
         stroke="#000000"
         strokeWidth={4}
       />
@@ -74,33 +78,24 @@ const Player: React.FC<PlayerProps> = ({ x, y, health }) => {
       
       {/* Stinger */}
       <Line
-        points={[
-          centerX, centerY + PLAYER_SIZE/2,
-          centerX, centerY + PLAYER_SIZE/1.3
-        ]}
+        points={generateRelativeLine(
+          centerX, centerY,
+          0, PLAYER_SIZE/2,
+          0, PLAYER_SIZE/1.3
+        )}
         stroke="#000000"
         strokeWidth={2}
         lineCap="round"
       />
       
-      {/* Health bar background */}
-      <Rect
-        x={x}
-        y={y + PLAYER_SIZE + 15}
-        width={PLAYER_SIZE}
-        height={HEALTH_BAR_HEIGHT}
-        fill="rgba(0, 0, 0, 0.5)"
-        cornerRadius={2}
-      />
-      
       {/* Health bar */}
-      <Rect
-        x={x}
-        y={y + PLAYER_SIZE + 15}
-        width={(health / 100) * PLAYER_SIZE}
-        height={HEALTH_BAR_HEIGHT}
-        fill="#4CAF50"
-        cornerRadius={2}
+      <HealthBar
+        x={healthBarPos.x}
+        y={healthBarPos.y}
+        width={PLAYER_SIZE}
+        currentHealth={health}
+        maxHealth={PLAYER_INITIAL_HEALTH}
+        barColor="#4CAF50"
       />
     </Group>
   );

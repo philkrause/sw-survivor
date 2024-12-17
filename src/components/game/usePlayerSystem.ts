@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Position } from '../../types/types';
 import { 
-  MOVEMENT_SPEED, 
+  PLAYER_SPEED, 
   PLAYER_SIZE, 
   STAGE_WIDTH, 
   STAGE_HEIGHT,
@@ -9,6 +9,8 @@ import {
   PLAYER_X,
   PLAYER_Y
 } from '../../game/constants';
+import { clamp } from '../../utils/mathUtils';
+import { keepInBounds } from './gameUtils';
 
 /**
  * Custom hook for managing player position and health
@@ -36,25 +38,26 @@ export const usePlayerSystem = (keys: { [key: string]: boolean }) => {
 
       // Check each movement key and update position accordingly
       if (keys['w'] || keys['arrowup']) {
-        newY = Math.max(0, prevPos.y - MOVEMENT_SPEED);
+        newY = prevPos.y - PLAYER_SPEED;
       }
       if (keys['s'] || keys['arrowdown']) {
-        newY = Math.min(STAGE_HEIGHT - PLAYER_SIZE, prevPos.y + MOVEMENT_SPEED);
+        newY = prevPos.y + PLAYER_SPEED;
       }
       if (keys['a'] || keys['arrowleft']) {
-        newX = Math.max(0, prevPos.x - MOVEMENT_SPEED);
+        newX = prevPos.x - PLAYER_SPEED;
       }
       if (keys['d'] || keys['arrowright']) {
-        newX = Math.min(STAGE_WIDTH - PLAYER_SIZE, prevPos.x + MOVEMENT_SPEED);
+        newX = prevPos.x + PLAYER_SPEED;
       }
 
-      return { x: newX, y: newY };
+      // Use utility function to keep player in bounds
+      return keepInBounds({ x: newX, y: newY }, PLAYER_SIZE);
     });
   }, [keys]);
   
   // Function to damage the player
   const damagePlayer = useCallback((damage: number) => {
-    setPlayerHealth(prev => Math.max(0, prev - damage));
+    setPlayerHealth(prev => clamp(prev - damage, 0, PLAYER_INITIAL_HEALTH));
   }, []);
   
   return {

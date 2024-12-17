@@ -11,7 +11,7 @@ export const GAME_WIDTH: number = 800;
 export const GAME_HEIGHT: number = 600;
 
 // Player settings
-export const PLAYER_SPEED: number = 5;
+export const PLAYER_SPEED: number = 3;
 export const PLAYER_INITIAL_HEALTH: number = 100;
 export const PLAYER_SIZE: number = 32;
 export const MOVEMENT_SPEED: number = 5;
@@ -19,7 +19,7 @@ export const MOVEMENT_SPEED: number = 5;
 // Enemy settings
 export const ENEMY_SPEED: number = 2;
 export const ENEMY_SPAWN_RATE: number = 1000; // ms
-export const ENEMY_INITIAL_HEALTH: number = 30;
+export const ENEMY_INITIAL_HEALTH: number = 10;
 export const ENEMY_SIZE: number = 32;
 export const SPAWN_INTERVAL: number = 2000;
 

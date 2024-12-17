@@ -47,6 +47,7 @@ const Game: React.FC = () => {
   const {
     projectiles,
     updateProjectiles,
+    fireProjectile,
     handleProjectileHit
   } = useProjectileSystem(playerPosRef);
   

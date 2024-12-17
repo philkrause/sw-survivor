@@ -1,14 +1,16 @@
 import React from 'react';
-import { Group, Circle, Rect, Line } from 'react-konva';
-import { ENEMY_SIZE, HEALTH_BAR_HEIGHT, MAX_ENEMY_HEALTH } from '../game/constants';
+import { Group, Circle, Line } from 'react-konva';
+import { ENEMY_SIZE, ENEMY_INITIAL_HEALTH } from '../game/constants';
 import { EnemyProps } from '../types/types';
+import HealthBar from './ui/HealthBar';
+import { calculateEntityCenter, calculateHealthBarPosition, generateRelativeLine } from '../utils/renderUtils';
 
 /**
  * Enemy component - will handle enemy rendering and behavior
  */
 const Enemy: React.FC<EnemyProps> = ({ x, y, health }) => {
-  const centerX = x + ENEMY_SIZE / 2;
-  const centerY = y + ENEMY_SIZE / 2;
+  const { x: centerX, y: centerY } = calculateEntityCenter(x, y, ENEMY_SIZE);
+  const healthBarPos = calculateHealthBarPosition(x, y, ENEMY_SIZE);
   
   return (
     <Group>
@@ -40,26 +42,29 @@ const Enemy: React.FC<EnemyProps> = ({ x, y, health }) => {
       
       {/* Wasp stripes */}
       <Line
-        points={[
-          centerX - ENEMY_SIZE/2, centerY - ENEMY_SIZE/6,
-          centerX + ENEMY_SIZE/2, centerY - ENEMY_SIZE/6
-        ]}
+        points={generateRelativeLine(
+          centerX, centerY,
+          -ENEMY_SIZE/2, -ENEMY_SIZE/6,
+          ENEMY_SIZE/2, -ENEMY_SIZE/6
+        )}
         stroke="#000000"
         strokeWidth={3}
       />
       <Line
-        points={[
-          centerX - ENEMY_SIZE/2, centerY + ENEMY_SIZE/8,
-          centerX + ENEMY_SIZE/2, centerY + ENEMY_SIZE/8
-        ]}
+        points={generateRelativeLine(
+          centerX, centerY,
+          -ENEMY_SIZE/2, ENEMY_SIZE/8,
+          ENEMY_SIZE/2, ENEMY_SIZE/8
+        )}
         stroke="#000000"
         strokeWidth={3}
       />
       <Line
-        points={[
-          centerX - ENEMY_SIZE/2, centerY + ENEMY_SIZE/3,
-          centerX + ENEMY_SIZE/2, centerY + ENEMY_SIZE/3
-        ]}
+        points={generateRelativeLine(
+          centerX, centerY,
+          -ENEMY_SIZE/2, ENEMY_SIZE/3,
+          ENEMY_SIZE/2, ENEMY_SIZE/3
+        )}
         stroke="#000000"
         strokeWidth={3}
       />
@@ -80,33 +85,24 @@ const Enemy: React.FC<EnemyProps> = ({ x, y, health }) => {
       
       {/* Stinger */}
       <Line
-        points={[
-          centerX, centerY + ENEMY_SIZE/2,
-          centerX, centerY + ENEMY_SIZE/1.2
-        ]}
+        points={generateRelativeLine(
+          centerX, centerY,
+          0, ENEMY_SIZE/2,
+          0, ENEMY_SIZE/1.2
+        )}
         stroke="#000000"
         strokeWidth={2}
         lineCap="round"
       />
       
-      {/* Health bar background */}
-      <Rect
-        x={x}
-        y={y + ENEMY_SIZE + 15}
-        width={ENEMY_SIZE}
-        height={HEALTH_BAR_HEIGHT}
-        fill="rgba(0, 0, 0, 0.5)"
-        cornerRadius={2}
-      />
-      
       {/* Health bar */}
-      <Rect
-        x={x}
-        y={y + ENEMY_SIZE + 15}
-        width={(health / MAX_ENEMY_HEALTH) * ENEMY_SIZE}
-        height={HEALTH_BAR_HEIGHT}
-        fill="#f44336"
-        cornerRadius={2}
+      <HealthBar
+        x={healthBarPos.x}
+        y={healthBarPos.y}
+        width={ENEMY_SIZE}
+        currentHealth={health}
+        maxHealth={ENEMY_INITIAL_HEALTH}
+        barColor="#f44336"
       />
     </Group>
   );
