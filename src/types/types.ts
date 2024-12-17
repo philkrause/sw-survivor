@@ -36,4 +36,13 @@ export interface Projectile extends GameEntity {
 
 // Component props types
 export type PlayerProps = EntityProps;
-export type EnemyProps = EntityProps; 
+export type EnemyProps = EntityProps;
+
+// UI props types
+export interface GameOverProps {
+  visible: boolean;
+}
+
+export interface ScoreProps {
+  score: number;
+} 

@@ -19,9 +19,10 @@ const getUniqueProjectileId = () => globalProjectileId++;
 /**
  * Custom hook for managing projectile creation and movement
  */
-export const useProjectileSystem = (playerPosRef: React.RefObject<Position>) => {
+export const useProjectileSystem = (playerPosRef: React.RefObject<Position>, isGameOver: boolean) => {
   const [projectiles, setProjectiles] = useState<Projectile[]>([]);
   const projectilesRef = useRef(projectiles);
+  const attackIntervalRef = useRef<number | null>(null);
   
   // Update refs when state changes
   useEffect(() => {
@@ -30,7 +31,7 @@ export const useProjectileSystem = (playerPosRef: React.RefObject<Position>) => 
   
   // Fire projectile from player
   const fireProjectile = useCallback(() => {
-    if (!playerPosRef.current) return;
+    if (!playerPosRef.current || isGameOver) return;
     
     const direction = generateRandomDirection();
     const currentPlayerPos = playerPosRef.current;
@@ -52,10 +53,12 @@ export const useProjectileSystem = (playerPosRef: React.RefObject<Position>) => 
     }]);
     
     console.log('Projectile fired, ID:', globalProjectileId - 1);
-  }, [playerPosRef]);
+  }, [playerPosRef, isGameOver]);
   
   // Update projectile positions
   const updateProjectiles = useCallback(() => {
+    if (isGameOver) return;
+    
     const currentProjectiles = projectilesRef.current;
     
     // Update projectiles and remove those off-screen
@@ -70,29 +73,44 @@ export const useProjectileSystem = (playerPosRef: React.RefObject<Position>) => 
       );
     
     setProjectiles(updatedProjectiles);
-  }, []);
+  }, [isGameOver]);
   
   // Set up auto-attack
   useEffect(() => {
     console.log('Setting up projectile attack interval:', ATTACK_RATE);
     
     // Fire immediately to test
-    fireProjectile();
-    
-    // Set up attack interval
-    const attackInterval = setInterval(() => {
-      console.log('Attack interval triggered');
+    if (!isGameOver) {
       fireProjectile();
-    }, ATTACK_RATE);
+      
+      // Set up attack interval
+      attackIntervalRef.current = setInterval(() => {
+        console.log('Attack interval triggered');
+        fireProjectile();
+      }, ATTACK_RATE);
+    }
     
     return () => {
-      console.log('Cleaning up attack interval');
-      clearInterval(attackInterval);
+      if (attackIntervalRef.current) {
+        console.log('Cleaning up attack interval');
+        clearInterval(attackIntervalRef.current);
+        attackIntervalRef.current = null;
+      }
     };
-  }, [fireProjectile]);
+  }, [fireProjectile, isGameOver]);
+  
+  // Stop attacks when game is over
+  useEffect(() => {
+    if (isGameOver && attackIntervalRef.current) {
+      clearInterval(attackIntervalRef.current);
+      attackIntervalRef.current = null;
+    }
+  }, [isGameOver]);
   
   // Function to handle a projectile hit
   const handleProjectileHit = useCallback((projectileId: number) => {
+    if (isGameOver) return;
+    
     setProjectiles(prev => 
       prev.map(projectile => 
         projectile.id === projectileId
@@ -100,12 +118,19 @@ export const useProjectileSystem = (playerPosRef: React.RefObject<Position>) => 
           : projectile
       ).filter(projectile => projectile.pierceLeft > 0)
     );
+  }, [isGameOver]);
+  
+  // Reset function for future use
+  const resetProjectileSystem = useCallback(() => {
+    setProjectiles([]);
+    globalProjectileId = 1;
   }, []);
   
   return {
     projectiles,
     updateProjectiles,
     fireProjectile,
-    handleProjectileHit
+    handleProjectileHit,
+    resetProjectileSystem
   };
 }; 

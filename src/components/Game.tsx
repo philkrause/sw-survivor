@@ -3,6 +3,8 @@ import { Stage, Layer, Image as KonvaImage } from 'react-konva';
 import Player from './Player';
 import Enemy from './Enemy';
 import Projectiles from './game/Projectiles';
+import GameOver from './ui/GameOver';
+import Score from './ui/Score';
 import { useImage } from 'react-konva-utils';
 import { STAGE_WIDTH, STAGE_HEIGHT } from '../game/constants';
 
@@ -33,15 +35,17 @@ const Game: React.FC = () => {
     playerHealth,
     playerPosRef,
     updatePosition,
-    damagePlayer
+    damagePlayer,
+    isGameOver
   } = usePlayerSystem(keys);
   
   // Set up enemy system
   const {
     enemies,
     updateEnemies,
-    damageEnemy
-  } = useEnemySystem(playerPosRef);
+    damageEnemy,
+    score
+  } = useEnemySystem(playerPosRef, isGameOver);
   
   // Set up projectile system
   const {
@@ -49,7 +53,7 @@ const Game: React.FC = () => {
     updateProjectiles,
     fireProjectile,
     handleProjectileHit
-  } = useProjectileSystem(playerPosRef);
+  } = useProjectileSystem(playerPosRef, isGameOver);
   
   // Set up collision detection
   const { checkCollisions } = useCollisionSystem({
@@ -62,7 +66,8 @@ const Game: React.FC = () => {
     handleProjectileHit
   });
   
-  // Set up the game loop
+  // Set up the game loop - we'll continue the game loop even when game over
+  // so we can still render everything, but individual systems will stop updating
   useGameLoop([
     updatePosition,
     updateEnemies,
@@ -102,6 +107,10 @@ const Game: React.FC = () => {
           
           {/* Projectiles */}
           <Projectiles projectiles={projectiles} />
+          
+          {/* UI Elements */}
+          <Score score={score} />
+          <GameOver visible={isGameOver} />
         </Layer>
       </Stage>
     </div>

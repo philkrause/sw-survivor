@@ -22,6 +22,7 @@ export const usePlayerSystem = (keys: { [key: string]: boolean }) => {
     y: PLAYER_Y
   });
   const [playerHealth, setPlayerHealth] = useState(PLAYER_INITIAL_HEALTH);
+  const [isGameOver, setIsGameOver] = useState(false);
   
   const playerPosRef = useRef(playerPos);
   
@@ -30,8 +31,17 @@ export const usePlayerSystem = (keys: { [key: string]: boolean }) => {
     playerPosRef.current = playerPos;
   }, [playerPos]);
   
+  // Check for game over when health changes
+  useEffect(() => {
+    if (playerHealth <= 0 && !isGameOver) {
+      setIsGameOver(true);
+    }
+  }, [playerHealth, isGameOver]);
+  
   // Update player position based on pressed keys
   const updatePosition = useCallback(() => {
+    if (isGameOver) return; // Don't update position if game is over
+    
     setPlayerPos(prevPos => {
       let newX = prevPos.x;
       let newY = prevPos.y;
@@ -53,11 +63,20 @@ export const usePlayerSystem = (keys: { [key: string]: boolean }) => {
       // Use utility function to keep player in bounds
       return keepInBounds({ x: newX, y: newY }, PLAYER_SIZE);
     });
-  }, [keys]);
+  }, [keys, isGameOver]);
   
   // Function to damage the player
   const damagePlayer = useCallback((damage: number) => {
+    if (isGameOver) return; // Don't damage player if game is over
+    
     setPlayerHealth(prev => clamp(prev - damage, 0, PLAYER_INITIAL_HEALTH));
+  }, [isGameOver]);
+  
+  // Reset game function for future use
+  const resetGame = useCallback(() => {
+    setPlayerHealth(PLAYER_INITIAL_HEALTH);
+    setPlayerPos({ x: PLAYER_X, y: PLAYER_Y });
+    setIsGameOver(false);
   }, []);
   
   return {
@@ -65,6 +84,8 @@ export const usePlayerSystem = (keys: { [key: string]: boolean }) => {
     playerHealth,
     playerPosRef,
     updatePosition,
-    damagePlayer
+    damagePlayer,
+    isGameOver,
+    resetGame
   };
 }; 
