@@ -19,15 +19,54 @@ const getUniqueProjectileId = () => globalProjectileId++;
 /**
  * Custom hook for managing projectile creation and movement
  */
-export const useProjectileSystem = (playerPosRef: React.RefObject<Position>, isGameOver: boolean) => {
+export const useProjectileSystem = (
+  playerPosRef: React.RefObject<Position>,
+  isGameOver: boolean,
+  attackRateRef?: React.MutableRefObject<number>,
+  pierceRef?: React.MutableRefObject<number>
+) => {
   const [projectiles, setProjectiles] = useState<Projectile[]>([]);
   const projectilesRef = useRef(projectiles);
   const attackIntervalRef = useRef<number | null>(null);
+  const [currentAttackRate, setCurrentAttackRate] = useState(ATTACK_RATE);
+  const [currentPierce, setCurrentPierce] = useState(DEFAULT_PIERCE);
   
   // Update refs when state changes
   useEffect(() => {
     projectilesRef.current = projectiles;
   }, [projectiles]);
+  
+  // Update attack rate if provided from outside
+  useEffect(() => {
+    if (attackRateRef?.current) {
+      setCurrentAttackRate(attackRateRef.current);
+    }
+  }, [attackRateRef?.current]);
+  
+  // Update pierce if provided from outside
+  useEffect(() => {
+    if (pierceRef?.current) {
+      setCurrentPierce(pierceRef.current);
+    }
+  }, [pierceRef?.current]);
+  
+  // Function to update attack rate
+  const updateAttackRate = useCallback((newRate: number) => {
+    setCurrentAttackRate(newRate);
+    
+    // Clear and reset the attack interval with the new rate
+    if (attackIntervalRef.current) {
+      clearInterval(attackIntervalRef.current);
+      attackIntervalRef.current = null;
+    }
+    
+    if (!isGameOver) {
+      attackIntervalRef.current = setInterval(() => {
+        console.log(`Attack interval triggered with rate: ${newRate}ms`);
+        fireProjectile();
+      }, newRate);
+    }
+  }, [isGameOver]);
   
   // Fire projectile from player
   const fireProjectile = useCallback(() => {
@@ -49,11 +88,11 @@ export const useProjectileSystem = (playerPosRef: React.RefObject<Position>, isG
       y: projectileY,
       directionX: direction.directionX,
       directionY: direction.directionY,
-      pierceLeft: DEFAULT_PIERCE
+      pierceLeft: currentPierce
     }]);
     
     console.log('Projectile fired, ID:', globalProjectileId - 1);
-  }, [playerPosRef, isGameOver]);
+  }, [playerPosRef, isGameOver, currentPierce]);
   
   // Update projectile positions
   const updateProjectiles = useCallback(() => {
@@ -77,7 +116,7 @@ export const useProjectileSystem = (playerPosRef: React.RefObject<Position>, isG
   
   // Set up auto-attack
   useEffect(() => {
-    console.log('Setting up projectile attack interval:', ATTACK_RATE);
+    console.log('Setting up projectile attack interval:', currentAttackRate);
     
     // Fire immediately to test
     if (!isGameOver) {
@@ -87,7 +126,7 @@ export const useProjectileSystem = (playerPosRef: React.RefObject<Position>, isG
       attackIntervalRef.current = setInterval(() => {
         console.log('Attack interval triggered');
         fireProjectile();
-      }, ATTACK_RATE);
+      }, currentAttackRate);
     }
     
     return () => {
@@ -97,7 +136,7 @@ export const useProjectileSystem = (playerPosRef: React.RefObject<Position>, isG
         attackIntervalRef.current = null;
       }
     };
-  }, [fireProjectile, isGameOver]);
+  }, [fireProjectile, isGameOver, currentAttackRate]);
   
   // Stop attacks when game is over
   useEffect(() => {
@@ -123,6 +162,8 @@ export const useProjectileSystem = (playerPosRef: React.RefObject<Position>, isG
   // Reset function for future use
   const resetProjectileSystem = useCallback(() => {
     setProjectiles([]);
+    setCurrentAttackRate(ATTACK_RATE);
+    setCurrentPierce(DEFAULT_PIERCE);
     globalProjectileId = 1;
   }, []);
   
@@ -131,6 +172,10 @@ export const useProjectileSystem = (playerPosRef: React.RefObject<Position>, isG
     updateProjectiles,
     fireProjectile,
     handleProjectileHit,
-    resetProjectileSystem
+    resetProjectileSystem,
+    updateAttackRate,
+    currentAttackRate,
+    setCurrentPierce,
+    currentPierce
   };
 }; 

@@ -11,6 +11,7 @@ interface CollisionSystemProps {
   damagePlayer: (damage: number) => void;
   damageEnemy: (enemyId: number, damage: number) => void;
   handleProjectileHit: (projectileId: number) => void;
+  projectileDamage?: number; // Optional parameter for projectile damage
 }
 
 /**
@@ -23,7 +24,8 @@ export const useCollisionSystem = ({
   projectiles,
   damagePlayer,
   damageEnemy,
-  handleProjectileHit
+  handleProjectileHit,
+  projectileDamage = PROJECTILE_DAMAGE // Default to constant if not provided
 }: CollisionSystemProps) => {
   
   // Check collisions between all game entities
@@ -51,14 +53,14 @@ export const useCollisionSystem = ({
         
         if (isColliding && projectile.pierceLeft > 0) {
           // Enemy takes damage from projectile
-          damageEnemy(enemy.id, PROJECTILE_DAMAGE);
+          damageEnemy(enemy.id, projectileDamage);
           
           // Reduce projectile pierce count
           handleProjectileHit(projectile.id);
         }
       });
     });
-  }, [playerPosX, playerPosY, enemies, projectiles, damagePlayer, damageEnemy, handleProjectileHit]);
+  }, [playerPosX, playerPosY, enemies, projectiles, damagePlayer, damageEnemy, handleProjectileHit, projectileDamage]);
   
   return {
     checkCollisions

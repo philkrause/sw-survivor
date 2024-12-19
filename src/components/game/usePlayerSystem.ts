@@ -23,6 +23,8 @@ export const usePlayerSystem = (keys: { [key: string]: boolean }) => {
   });
   const [playerHealth, setPlayerHealth] = useState(PLAYER_INITIAL_HEALTH);
   const [isGameOver, setIsGameOver] = useState(false);
+  const [currentMaxHealth, setCurrentMaxHealth] = useState(PLAYER_INITIAL_HEALTH);
+  const [currentSpeed, setCurrentSpeed] = useState(PLAYER_SPEED);
   
   const playerPosRef = useRef(playerPos);
   
@@ -48,35 +50,49 @@ export const usePlayerSystem = (keys: { [key: string]: boolean }) => {
 
       // Check each movement key and update position accordingly
       if (keys['w'] || keys['arrowup']) {
-        newY = prevPos.y - PLAYER_SPEED;
+        newY = prevPos.y - currentSpeed;
       }
       if (keys['s'] || keys['arrowdown']) {
-        newY = prevPos.y + PLAYER_SPEED;
+        newY = prevPos.y + currentSpeed;
       }
       if (keys['a'] || keys['arrowleft']) {
-        newX = prevPos.x - PLAYER_SPEED;
+        newX = prevPos.x - currentSpeed;
       }
       if (keys['d'] || keys['arrowright']) {
-        newX = prevPos.x + PLAYER_SPEED;
+        newX = prevPos.x + currentSpeed;
       }
 
       // Use utility function to keep player in bounds
       return keepInBounds({ x: newX, y: newY }, PLAYER_SIZE);
     });
-  }, [keys, isGameOver]);
+  }, [keys, isGameOver, currentSpeed]);
   
   // Function to damage the player
   const damagePlayer = useCallback((damage: number) => {
     if (isGameOver) return; // Don't damage player if game is over
     
-    setPlayerHealth(prev => clamp(prev - damage, 0, PLAYER_INITIAL_HEALTH));
-  }, [isGameOver]);
+    setPlayerHealth(prev => clamp(prev - damage, 0, currentMaxHealth));
+  }, [isGameOver, currentMaxHealth]);
+  
+  // Function to increase player's movement speed
+  const increaseSpeed = useCallback((amount: number) => {
+    setCurrentSpeed(prev => prev + amount);
+  }, []);
+  
+  // Function to increase player's maximum health
+  const increaseMaxHealth = useCallback((amount: number) => {
+    setCurrentMaxHealth(prev => prev + amount);
+    // Also heal the player by the same amount
+    setPlayerHealth(prev => clamp(prev + amount, 0, currentMaxHealth + amount));
+  }, [currentMaxHealth]);
   
   // Reset game function for future use
   const resetGame = useCallback(() => {
     setPlayerHealth(PLAYER_INITIAL_HEALTH);
     setPlayerPos({ x: PLAYER_X, y: PLAYER_Y });
     setIsGameOver(false);
+    setCurrentMaxHealth(PLAYER_INITIAL_HEALTH);
+    setCurrentSpeed(PLAYER_SPEED);
   }, []);
   
   return {
@@ -86,6 +102,9 @@ export const usePlayerSystem = (keys: { [key: string]: boolean }) => {
     updatePosition,
     damagePlayer,
     isGameOver,
-    resetGame
+    resetGame,
+    increaseSpeed,
+    increaseMaxHealth,
+    currentMaxHealth
   };
 }; 

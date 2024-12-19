@@ -45,4 +45,5 @@ export interface GameOverProps {
 
 export interface ScoreProps {
   score: number;
+  level?: number;
 } 
