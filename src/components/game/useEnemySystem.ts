@@ -11,7 +11,11 @@ const getUniqueEnemyId = () => globalEnemyId++;
 /**
  * Custom hook for managing enemy spawning and movement
  */
-export const useEnemySystem = (playerPosRef: React.RefObject<Position>, isGameOver: boolean) => {
+export const useEnemySystem = (
+  playerPosRef: React.RefObject<Position>, 
+  isGameOver: boolean,
+  isPaused: boolean = false
+) => {
   const [enemies, setEnemies] = useState<Enemy[]>([]);
   const [score, setScore] = useState(0);
   const enemiesRef = useRef(enemies);
@@ -24,7 +28,7 @@ export const useEnemySystem = (playerPosRef: React.RefObject<Position>, isGameOv
   
   // Update enemy positions based on player position
   const updateEnemies = useCallback(() => {
-    if (!playerPosRef.current || isGameOver) return;
+    if (!playerPosRef.current || isGameOver || isPaused) return;
     
     const currentPlayerPos = playerPosRef.current;
     const currentEnemies = enemiesRef.current;
@@ -47,11 +51,11 @@ export const useEnemySystem = (playerPosRef: React.RefObject<Position>, isGameOv
     });
     
     setEnemies(updatedEnemies);
-  }, [playerPosRef, isGameOver]);
+  }, [playerPosRef, isGameOver, isPaused]);
   
   // Function to spawn a single enemy
   const spawnEnemy = useCallback(() => {
-    if (isGameOver) return;
+    if (isGameOver || isPaused) return;
     
     const spawnPos = generateSpawnPosition();
     
@@ -66,44 +70,62 @@ export const useEnemySystem = (playerPosRef: React.RefObject<Position>, isGameOv
     ]);
     
     console.log('Enemy spawned, ID:', globalEnemyId - 1);
-  }, [isGameOver]);
+  }, [isGameOver, isPaused]);
   
-  // Set up the spawn interval
-  useEffect(() => {
-    console.log('Setting up enemy spawn interval');
+  // Function to manage the spawn interval
+  const resetSpawnInterval = useCallback(() => {
+    // Clear any existing interval
+    if (spawnIntervalRef.current) {
+      console.log('Cleaning up spawn interval');
+      window.clearInterval(spawnIntervalRef.current);
+      spawnIntervalRef.current = null;
+    }
     
-    // Spawn first enemy immediately
-    if (!isGameOver) {
-      spawnEnemy();
-      
-      // Set up the interval
+    // Only set up new interval if game is not over or paused
+    if (!isGameOver && !isPaused) {
+      console.log('Setting up enemy spawn interval');
       spawnIntervalRef.current = window.setInterval(() => {
         console.log('Spawn interval triggered');
         spawnEnemy();
       }, SPAWN_INTERVAL);
     }
+  }, [isGameOver, isPaused, spawnEnemy]);
+  
+  // Handle pause state changes
+  useEffect(() => {
+    if ((isPaused || isGameOver) && spawnIntervalRef.current) {
+      // Clear the interval when game is paused or over
+      window.clearInterval(spawnIntervalRef.current);
+      spawnIntervalRef.current = null;
+    } else if (!isPaused && !isGameOver && !spawnIntervalRef.current) {
+      // Restart the interval when game is unpaused and not over
+      resetSpawnInterval();
+    }
+  }, [isPaused, isGameOver, resetSpawnInterval]);
+  
+  // Set up the spawn interval initially
+  useEffect(() => {
+    // Spawn first enemy immediately if not paused
+    if (!isGameOver && !isPaused) {
+      spawnEnemy();
+    }
+    
+    // Set up the interval if not paused
+    resetSpawnInterval();
     
     // Return cleanup function
     return () => {
       if (spawnIntervalRef.current) {
-        console.log('Cleaning up spawn interval');
+        console.log('Cleaning up spawn interval on unmount');
         window.clearInterval(spawnIntervalRef.current);
         spawnIntervalRef.current = null;
       }
     };
-  }, [spawnEnemy, isGameOver]);
-  
-  // Stop spawning when game is over
-  useEffect(() => {
-    if (isGameOver && spawnIntervalRef.current) {
-      window.clearInterval(spawnIntervalRef.current);
-      spawnIntervalRef.current = null;
-    }
-  }, [isGameOver]);
+  }, [spawnEnemy, isGameOver, isPaused, resetSpawnInterval]);
   
   // Function to handle enemy damage or destruction
   const damageEnemy = useCallback((enemyId: number, damage: number) => {
-    if (isGameOver) return;
+    if (isGameOver || isPaused) return;
     
     setEnemies(prev => {
       // Check if this enemy will be killed by the damage
@@ -120,7 +142,7 @@ export const useEnemySystem = (playerPosRef: React.RefObject<Position>, isGameOv
           : enemy
       ).filter(enemy => enemy.health > 0);
     });
-  }, [isGameOver]);
+  }, [isGameOver, isPaused]);
   
   // Reset function for future use
   const resetEnemySystem = useCallback(() => {

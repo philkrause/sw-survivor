@@ -61,7 +61,7 @@ const Game: React.FC = () => {
     updateEnemies,
     damageEnemy,
     score
-  } = useEnemySystem(playerPosRef, isGameOver);
+  } = useEnemySystem(playerPosRef, isGameOver, isPaused);
   
   // Set up projectile system with refs to dynamic config values
   const {
@@ -73,7 +73,7 @@ const Game: React.FC = () => {
     setCurrentPierce,
     currentAttackRate,
     currentPierce
-  } = useProjectileSystem(playerPosRef, isGameOver);
+  } = useProjectileSystem(playerPosRef, isGameOver, isPaused);
   
   // Update projectile system when game config changes
   useEffect(() => {

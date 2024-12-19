@@ -22,6 +22,7 @@ const getUniqueProjectileId = () => globalProjectileId++;
 export const useProjectileSystem = (
   playerPosRef: React.RefObject<Position>,
   isGameOver: boolean,
+  isPaused: boolean = false,
   attackRateRef?: React.MutableRefObject<number>,
   pierceRef?: React.MutableRefObject<number>
 ) => {
@@ -54,23 +55,29 @@ export const useProjectileSystem = (
   const updateAttackRate = useCallback((newRate: number) => {
     setCurrentAttackRate(newRate);
     
-    // Clear and reset the attack interval with the new rate
+    resetAttackInterval(newRate);
+  }, [isGameOver, isPaused]);
+  
+  // Function to reset attack interval with current rate
+  const resetAttackInterval = useCallback((rate: number = currentAttackRate) => {
+    // Clear any existing interval
     if (attackIntervalRef.current) {
       clearInterval(attackIntervalRef.current);
       attackIntervalRef.current = null;
     }
     
-    if (!isGameOver) {
+    // Only set up new interval if game is not over or paused
+    if (!isGameOver && !isPaused) {
       attackIntervalRef.current = setInterval(() => {
-        console.log(`Attack interval triggered with rate: ${newRate}ms`);
+        console.log(`Attack interval triggered with rate: ${rate}ms`);
         fireProjectile();
-      }, newRate);
+      }, rate);
     }
-  }, [isGameOver]);
+  }, [isGameOver, isPaused, currentAttackRate]);
   
   // Fire projectile from player
   const fireProjectile = useCallback(() => {
-    if (!playerPosRef.current || isGameOver) return;
+    if (!playerPosRef.current || isGameOver || isPaused) return;
     
     const direction = generateRandomDirection();
     const currentPlayerPos = playerPosRef.current;
@@ -92,11 +99,11 @@ export const useProjectileSystem = (
     }]);
     
     console.log('Projectile fired, ID:', globalProjectileId - 1);
-  }, [playerPosRef, isGameOver, currentPierce]);
+  }, [playerPosRef, isGameOver, isPaused, currentPierce]);
   
   // Update projectile positions
   const updateProjectiles = useCallback(() => {
-    if (isGameOver) return;
+    if (isGameOver || isPaused) return;
     
     const currentProjectiles = projectilesRef.current;
     
@@ -112,22 +119,31 @@ export const useProjectileSystem = (
       );
     
     setProjectiles(updatedProjectiles);
-  }, [isGameOver]);
+  }, [isGameOver, isPaused]);
   
-  // Set up auto-attack
+  // Handle pause state changes
+  useEffect(() => {
+    if (isPaused && attackIntervalRef.current) {
+      // Clear the interval when game is paused
+      clearInterval(attackIntervalRef.current);
+      attackIntervalRef.current = null;
+    } else if (!isPaused && !attackIntervalRef.current && !isGameOver) {
+      // Restart the interval when game is unpaused
+      resetAttackInterval();
+    }
+  }, [isPaused, isGameOver, resetAttackInterval]);
+  
+  // Set up auto-attack initially
   useEffect(() => {
     console.log('Setting up projectile attack interval:', currentAttackRate);
     
-    // Fire immediately to test
-    if (!isGameOver) {
+    // Fire immediately to test if not paused
+    if (!isGameOver && !isPaused) {
       fireProjectile();
-      
-      // Set up attack interval
-      attackIntervalRef.current = setInterval(() => {
-        console.log('Attack interval triggered');
-        fireProjectile();
-      }, currentAttackRate);
     }
+    
+    // Set up attack interval if not paused
+    resetAttackInterval();
     
     return () => {
       if (attackIntervalRef.current) {
@@ -136,7 +152,7 @@ export const useProjectileSystem = (
         attackIntervalRef.current = null;
       }
     };
-  }, [fireProjectile, isGameOver, currentAttackRate]);
+  }, [fireProjectile, isGameOver, isPaused, currentAttackRate, resetAttackInterval]);
   
   // Stop attacks when game is over
   useEffect(() => {
@@ -148,7 +164,7 @@ export const useProjectileSystem = (
   
   // Function to handle a projectile hit
   const handleProjectileHit = useCallback((projectileId: number) => {
-    if (isGameOver) return;
+    if (isGameOver || isPaused) return;
     
     setProjectiles(prev => 
       prev.map(projectile => 
@@ -157,7 +173,7 @@ export const useProjectileSystem = (
           : projectile
       ).filter(projectile => projectile.pierceLeft > 0)
     );
-  }, [isGameOver]);
+  }, [isGameOver, isPaused]);
   
   // Reset function for future use
   const resetProjectileSystem = useCallback(() => {
