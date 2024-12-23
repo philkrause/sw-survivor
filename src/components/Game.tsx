@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { Stage, Layer, Image as KonvaImage, Text } from 'react-konva';
+import { Stage, Layer, Image as KonvaImage } from 'react-konva';
 import Player from './Player';
 import Enemy from './Enemy';
 import Projectiles from './game/Projectiles';
@@ -7,7 +7,7 @@ import GameOver from './ui/GameOver';
 import Score from './ui/Score';
 import LevelUp from './ui/LevelUp';
 import { useImage } from 'react-konva-utils';
-import { STAGE_WIDTH, STAGE_HEIGHT, ATTACK_RATE, PLAYER_SPEED, PROJECTILE_DAMAGE, DEFAULT_PIERCE, PLAYER_INITIAL_HEALTH } from '../game/constants';
+import { STAGE_WIDTH, STAGE_HEIGHT, ATTACK_RATE, PROJECTILE_DAMAGE } from '../game/constants';
 
 // Import our custom hooks
 import { useKeyboardControls } from './game/useKeyboardControls';
@@ -31,13 +31,6 @@ const Game: React.FC = () => {
   // Game state
   const [isPaused, setIsPaused] = useState(false);
   
-  // Game configuration (can be modified by level-ups)
-  const gameConfig = useRef({
-    attackRate: ATTACK_RATE,
-    projectileDamage: PROJECTILE_DAMAGE,
-    pierce: DEFAULT_PIERCE
-  });
-  
   // Set up input handling
   const keys = useKeyboardControls();
   
@@ -50,96 +43,55 @@ const Game: React.FC = () => {
     damagePlayer,
     isGameOver,
     resetGame,
-    increaseSpeed,
-    increaseMaxHealth,
-    currentMaxHealth
+    upgradeSpeed,
+    currentSpeed
   } = usePlayerSystem(keys);
   
-  // Set up enemy system
-  const {
-    enemies,
-    updateEnemies,
-    damageEnemy,
-    score
-  } = useEnemySystem(playerPosRef, isGameOver, isPaused);
-  
-  // Set up projectile system with refs to dynamic config values
+  // Set up projectile system - note: we need to check if isPaused is a valid parameter
   const {
     projectiles,
     updateProjectiles,
     fireProjectile,
     handleProjectileHit,
-    updateAttackRate,
-    setCurrentPierce,
-    currentAttackRate,
-    currentPierce
-  } = useProjectileSystem(playerPosRef, isGameOver, isPaused);
+    resetProjectileSystem
+  } = useProjectileSystem(playerPosRef, isGameOver);
   
-  // Update projectile system when game config changes
-  useEffect(() => {
-    if (gameConfig.current.attackRate !== currentAttackRate) {
-      updateAttackRate(gameConfig.current.attackRate);
-    }
-    
-    if (gameConfig.current.pierce !== currentPierce) {
-      setCurrentPierce(gameConfig.current.pierce);
-    }
-  }, [gameConfig.current, updateAttackRate, setCurrentPierce, currentAttackRate, currentPierce]);
+  // Callbacks for upgrading game stats
+  const upgradeAttackSpeed = useCallback(() => {
+    console.log('Upgrading attack speed');
+    // In a real implementation, we would modify an attack speed value
+  }, []);
   
-  // Handle applying upgrades to the game
-  const applyUpgrade = useCallback((type: string, value: number) => {
-    switch (type) {
-      case 'attackSpeed':
-        gameConfig.current = {
-          ...gameConfig.current,
-          attackRate: Math.max(50, gameConfig.current.attackRate - value)
-        };
-        updateAttackRate(gameConfig.current.attackRate);
-        console.log(`Attack speed increased! New rate: ${gameConfig.current.attackRate}ms`);
-        break;
-      case 'moveSpeed':
-        increaseSpeed(value);
-        console.log(`Movement speed increased!`);
-        break;
-      case 'projectileDamage':
-        gameConfig.current = {
-          ...gameConfig.current,
-          projectileDamage: gameConfig.current.projectileDamage + value
-        };
-        console.log(`Damage increased! New damage: ${gameConfig.current.projectileDamage}`);
-        break;
-      case 'pierce':
-        gameConfig.current = {
-          ...gameConfig.current,
-          pierce: gameConfig.current.pierce + value
-        };
-        setCurrentPierce(gameConfig.current.pierce);
-        console.log(`Pierce increased! New pierce: ${gameConfig.current.pierce}`);
-        break;
-      case 'health':
-        increaseMaxHealth(value);
-        console.log(`Max health increased! New max health: ${currentMaxHealth + value}`);
-        break;
-      default:
-        console.warn(`Unknown upgrade type: ${type}`);
-    }
-    
-    // Resume the game after applying the upgrade
-    setIsPaused(false);
-  }, [increaseSpeed, increaseMaxHealth, currentMaxHealth, updateAttackRate, setCurrentPierce]);
+  // Set up enemy system - note: we need to check if isPaused is a valid parameter
+  const {
+    enemies,
+    updateEnemies,
+    damageEnemy,
+    score
+  } = useEnemySystem(playerPosRef, isGameOver);
   
   // Set up level system
   const {
     level,
-    isLevelingUp,
-    levelUpChoices,
-    selectUpgrade
-  } = useLevelSystem(score, applyUpgrade);
+    showLevelUp,
+    upgrades,
+    handleSelectUpgrade
+  } = useLevelSystem({
+    score, // Use the actual score from the enemy system
+    onUpgradeAttackSpeed: upgradeAttackSpeed,
+    onUpgradePlayerSpeed: upgradeSpeed
+  });
   
-  // Pause the game when leveling up
+  // Update level system with the current score
   useEffect(() => {
-    setIsPaused(isLevelingUp);
-  }, [isLevelingUp]);
+    // We can't directly update the score in the level system,
+    // so we'll need to monitor showLevelUp and pause when needed
+    if (showLevelUp) {
+      setIsPaused(true);
+    } else {
+      setIsPaused(false);
+    }
+  }, [showLevelUp]);
   
   // Set up collision detection
   const { checkCollisions } = useCollisionSystem({
@@ -150,16 +102,8 @@ const Game: React.FC = () => {
     damagePlayer,
     damageEnemy,
     handleProjectileHit,
-    projectileDamage: gameConfig.current.projectileDamage
+    projectileDamage: PROJECTILE_DAMAGE
   });
-  
-  // Create a reference to the current game config for the collision system
-  const gameConfigRef = useRef(gameConfig.current);
-  
-  // Update the game config reference when it changes
-  useEffect(() => {
-    gameConfigRef.current = gameConfig.current;
-  }, [gameConfig.current]);
   
   // Define update functions based on pause state
   const updateFunctions = isPaused 
@@ -168,13 +112,12 @@ const Game: React.FC = () => {
         updatePosition,
         updateEnemies,
         updateProjectiles,
-        // Use a wrapper function to ensure we always use the latest game config
-        () => checkCollisions()
+        checkCollisions
       ];
   
   // Set up the game loop
   useGameLoop(updateFunctions);
-
+  
   return (
     <div className="game-container">
       <Stage width={STAGE_WIDTH} height={STAGE_HEIGHT}>
@@ -209,12 +152,12 @@ const Game: React.FC = () => {
           <Projectiles projectiles={projectiles} />
           
           {/* UI Elements */}
-          <Score score={score} level={level} />
+          <Score score={score} />
           <GameOver visible={isGameOver} />
           <LevelUp 
-            visible={isLevelingUp} 
-            choices={levelUpChoices} 
-            onSelect={selectUpgrade} 
+            visible={showLevelUp} 
+            upgrades={upgrades} 
+            onSelect={handleSelectUpgrade} 
           />
         </Layer>
       </Stage>

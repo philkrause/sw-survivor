@@ -1,27 +1,28 @@
 import React from 'react';
 import { Text, Group, Rect } from 'react-konva';
+import { LevelUpProps, Upgrade } from '../../types/types';
 import { STAGE_WIDTH, STAGE_HEIGHT } from '../../game/constants';
 
-interface LevelUpProps {
-  visible: boolean;
-  choices: { type: string; label: string; value: number }[];
-  onSelect: (type: string, value: number) => void;
-}
+/**
+ * Component to display level-up choices
+ */
+const LevelUp: React.FC<LevelUpProps> = ({ visible, upgrades, onSelect }) => {
+  if (!visible || !upgrades.length) return null;
 
-const LevelUp: React.FC<LevelUpProps> = ({ visible, choices, onSelect }) => {
-  if (!visible) return null;
-
-  // Calculate positioning for the UI elements
-  const modalWidth = 400;
-  const modalHeight = 300;
-  const modalX = (STAGE_WIDTH - modalWidth) / 2;
-  const modalY = (STAGE_HEIGHT - modalHeight) / 2;
-
-  // Handle click on an upgrade choice
-  const handleClick = (type: string, value: number) => {
-    onSelect(type, value);
+  const containerWidth = 500;
+  const containerHeight = 300;
+  const containerX = STAGE_WIDTH / 2 - containerWidth / 2;
+  const containerY = STAGE_HEIGHT / 2 - containerHeight / 2;
+  
+  const titleHeight = 60;
+  const choiceHeight = 100;
+  const choiceWidth = containerWidth - 40;
+  const gap = 20;
+  
+  const handleTouchStart = (upgrade: Upgrade) => {
+    onSelect(upgrade);
   };
-
+  
   return (
     <Group>
       {/* Semi-transparent overlay */}
@@ -33,95 +34,88 @@ const LevelUp: React.FC<LevelUpProps> = ({ visible, choices, onSelect }) => {
         fill="black"
         opacity={0.7}
       />
-
-      {/* Modal background */}
+      
+      {/* Level-up container */}
       <Rect
-        x={modalX}
-        y={modalY}
-        width={modalWidth}
-        height={modalHeight}
-        fill="#222"
-        stroke="#ccc"
-        strokeWidth={2}
-        cornerRadius={5}
+        x={containerX}
+        y={containerY}
+        width={containerWidth}
+        height={containerHeight}
+        fill="#333333"
+        shadowColor="black"
+        shadowBlur={10}
+        shadowOffsetX={5}
+        shadowOffsetY={5}
+        cornerRadius={10}
       />
-
+      
       {/* Title */}
+      <Rect
+        x={containerX}
+        y={containerY}
+        width={containerWidth}
+        height={titleHeight}
+        fill="#f7c33b" // Bee/honey color
+        cornerRadius={[10, 10, 0, 0]}
+      />
+      
       <Text
-        x={modalX}
-        y={modalY + 20}
-        width={modalWidth}
+        x={containerX}
+        y={containerY}
+        width={containerWidth}
+        height={titleHeight}
         text="LEVEL UP!"
-        fontSize={28}
+        fontSize={30}
+        fontFamily="Arial"
         fontStyle="bold"
-        fill="#FFD700" // Gold color
+        fill="#333333"
         align="center"
+        verticalAlign="middle"
       />
-
-      {/* Subtitle */}
-      <Text
-        x={modalX}
-        y={modalY + 60}
-        width={modalWidth}
-        text="Choose an upgrade:"
-        fontSize={18}
-        fill="#fff"
-        align="center"
-      />
-
-      {/* Choice 1 Button */}
-      <Group
-        x={modalX + 50}
-        y={modalY + 110}
-        width={modalWidth - 100}
-        height={50}
-        onClick={() => handleClick(choices[0].type, choices[0].value)}
-      >
-        <Rect
-          width={modalWidth - 100}
-          height={50}
-          fill="#444"
-          stroke="#888"
-          strokeWidth={1}
-          cornerRadius={5}
-        />
-        <Text
-          width={modalWidth - 100}
-          height={50}
-          text={choices[0].label}
-          fontSize={16}
-          fill="#fff"
-          align="center"
-          verticalAlign="middle"
-        />
-      </Group>
-
-      {/* Choice 2 Button */}
-      <Group
-        x={modalX + 50}
-        y={modalY + 180}
-        width={modalWidth - 100}
-        height={50}
-        onClick={() => handleClick(choices[1].type, choices[1].value)}
-      >
-        <Rect
-          width={modalWidth - 100}
-          height={50}
-          fill="#444"
-          stroke="#888"
-          strokeWidth={1}
-          cornerRadius={5}
-        />
-        <Text
-          width={modalWidth - 100}
-          height={50}
-          text={choices[1].label}
-          fontSize={16}
-          fill="#fff"
-          align="center"
-          verticalAlign="middle"
-        />
-      </Group>
+      
+      {/* Choices */}
+      {upgrades.map((upgrade, index) => {
+        const choiceY = containerY + titleHeight + gap + (choiceHeight + gap) * index;
+        
+        return (
+          <Group key={upgrade.id} onClick={() => handleTouchStart(upgrade)}>
+            <Rect
+              x={containerX + 20}
+              y={choiceY}
+              width={choiceWidth}
+              height={choiceHeight}
+              fill="#4a4a4a"
+              cornerRadius={5}
+              shadowColor="black"
+              shadowBlur={5}
+              shadowOffsetX={2}
+              shadowOffsetY={2}
+              onTap={() => handleTouchStart(upgrade)}
+            />
+            
+            <Text
+              x={containerX + 40}
+              y={choiceY + 15}
+              width={choiceWidth - 40}
+              text={upgrade.name}
+              fontSize={22}
+              fontFamily="Arial"
+              fontStyle="bold"
+              fill="#f7c33b" // Bee/honey color
+            />
+            
+            <Text
+              x={containerX + 40}
+              y={choiceY + 45}
+              width={choiceWidth - 40}
+              text={upgrade.description}
+              fontSize={16}
+              fontFamily="Arial"
+              fill="#ffffff"
+            />
+          </Group>
+        );
+      })}
     </Group>
   );
 };

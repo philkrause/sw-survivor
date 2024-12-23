@@ -11,10 +11,9 @@ export const GAME_WIDTH: number = 800;
 export const GAME_HEIGHT: number = 600;
 
 // Player settings
-export const PLAYER_SPEED: number = 3;
+export const PLAYER_SPEED: number = 1;
 export const PLAYER_INITIAL_HEALTH: number = 100;
 export const PLAYER_SIZE: number = 32;
-export const MOVEMENT_SPEED: number = 5;
 
 // Enemy settings
 export const ENEMY_SPEED: number = 2;
@@ -32,7 +31,9 @@ export const ATTACK_INTERVAL: number = 500;
 export const DEFAULT_PIERCE: number = 1;
 
 // Game progression
-export const LEVEL_UP_THRESHOLD: number = 100;
+export const LEVEL_UP_THRESHOLD: number = 1; // Enemies to kill for level up (start with 1 as per requirements)
+export const PLAYER_SPEED_UPGRADE: number = 1; // Amount to increase player speed per upgrade
+export const ATTACK_RATE_UPGRADE: number = 50; // Amount to decrease attack interval per upgrade (ms)
 
 // Canvas positioning
 export const PLAYER_X: number = STAGE_WIDTH / 2 - PLAYER_SIZE / 2;

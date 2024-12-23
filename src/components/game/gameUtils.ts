@@ -1,9 +1,8 @@
-import { Position, Direction, Enemy, Projectile } from '../../types/types';
+import { Position, Direction, Projectile } from '../../types/types';
 import { 
   STAGE_WIDTH, 
   STAGE_HEIGHT, 
   ENEMY_SIZE, 
-  PLAYER_SIZE, 
   PROJECTILE_SIZE 
 } from '../../game/constants';
 import { randomRange, clamp } from '../../utils/mathUtils';

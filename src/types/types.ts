@@ -45,5 +45,18 @@ export interface GameOverProps {
 
 export interface ScoreProps {
   score: number;
-  level?: number;
+}
+
+// Level-up types
+export interface Upgrade {
+  id: string;
+  name: string;
+  description: string;
+  apply: () => void;
+}
+
+export interface LevelUpProps {
+  visible: boolean;
+  upgrades: Upgrade[];
+  onSelect: (upgrade: Upgrade) => void;
 } 
