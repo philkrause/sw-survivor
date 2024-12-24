@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Stage, Layer, Image as KonvaImage } from 'react-konva';
 import Player from './Player';
 import Enemy from './Enemy';
@@ -7,7 +7,7 @@ import GameOver from './ui/GameOver';
 import Score from './ui/Score';
 import LevelUp from './ui/LevelUp';
 import { useImage } from 'react-konva-utils';
-import { STAGE_WIDTH, STAGE_HEIGHT, ATTACK_RATE, PROJECTILE_DAMAGE } from '../game/constants';
+import { STAGE_WIDTH, STAGE_HEIGHT, PROJECTILE_DAMAGE } from '../game/constants';
 
 // Import our custom hooks
 import { useKeyboardControls } from './game/useKeyboardControls';
@@ -42,18 +42,14 @@ const Game: React.FC = () => {
     updatePosition,
     damagePlayer,
     isGameOver,
-    resetGame,
-    upgradeSpeed,
-    currentSpeed
+    upgradeSpeed
   } = usePlayerSystem(keys);
   
   // Set up projectile system - note: we need to check if isPaused is a valid parameter
   const {
     projectiles,
     updateProjectiles,
-    fireProjectile,
-    handleProjectileHit,
-    resetProjectileSystem
+    handleProjectileHit
   } = useProjectileSystem(playerPosRef, isGameOver);
   
   // Callbacks for upgrading game stats
@@ -72,7 +68,6 @@ const Game: React.FC = () => {
   
   // Set up level system
   const {
-    level,
     showLevelUp,
     upgrades,
     handleSelectUpgrade
@@ -116,7 +111,7 @@ const Game: React.FC = () => {
       ];
   
   // Set up the game loop
-  useGameLoop(updateFunctions);
+  useGameLoop(updateFunctions, isPaused);
   
   return (
     <div className="game-container">
