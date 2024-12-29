@@ -45,12 +45,12 @@ const Game: React.FC = () => {
     upgradeSpeed
   } = usePlayerSystem(keys);
   
-  // Set up projectile system - note: we need to check if isPaused is a valid parameter
+  // Set up projectile system
   const {
     projectiles,
     updateProjectiles,
     handleProjectileHit
-  } = useProjectileSystem(playerPosRef, isGameOver);
+  } = useProjectileSystem(playerPosRef, isGameOver, isPaused);
   
   // Callbacks for upgrading game stats
   const upgradeAttackSpeed = useCallback(() => {
@@ -58,13 +58,13 @@ const Game: React.FC = () => {
     // In a real implementation, we would modify an attack speed value
   }, []);
   
-  // Set up enemy system - note: we need to check if isPaused is a valid parameter
+  // Set up enemy system
   const {
     enemies,
     updateEnemies,
     damageEnemy,
     score
-  } = useEnemySystem(playerPosRef, isGameOver);
+  } = useEnemySystem(playerPosRef, isGameOver, isPaused);
   
   // Set up level system
   const {
