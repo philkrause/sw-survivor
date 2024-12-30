@@ -43,22 +43,34 @@ export const usePlayerSystem = (keys: { [key: string]: boolean }) => {
     if (isGameOver) return; // Don't update position if game is over
     
     setPlayerPos(prevPos => {
-      let newX = prevPos.x;
-      let newY = prevPos.y;
+      let deltaX = 0;
+      let deltaY = 0;
 
-      // Check each movement key and update position accordingly
+      // Calculate movement direction first
       if (keys['w'] || keys['arrowup']) {
-        newY = prevPos.y - currentSpeed;
+        deltaY = -1;
       }
       if (keys['s'] || keys['arrowdown']) {
-        newY = prevPos.y + currentSpeed;
+        deltaY = 1;
       }
       if (keys['a'] || keys['arrowleft']) {
-        newX = prevPos.x - currentSpeed;
+        deltaX = -1;
       }
       if (keys['d'] || keys['arrowright']) {
-        newX = prevPos.x + currentSpeed;
+        deltaX = 1;
       }
+
+      // Normalize diagonal movement to maintain consistent speed
+      if (deltaX !== 0 && deltaY !== 0) {
+        // If moving diagonally, normalize the vector
+        const length = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+        deltaX = deltaX / length;
+        deltaY = deltaY / length;
+      }
+
+      // Apply speed after normalization
+      const newX = prevPos.x + deltaX * currentSpeed;
+      const newY = prevPos.y + deltaY * currentSpeed;
 
       // Use utility function to keep player in bounds
       return keepInBounds({ x: newX, y: newY }, PLAYER_SIZE);
