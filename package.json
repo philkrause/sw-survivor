@@ -11,11 +11,9 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "konva": "^9.3.18",
+    "phaser": "^3.88.2",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "react-konva": "^19.0.3",
-    "react-konva-utils": "^1.1.0"
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.21.0",

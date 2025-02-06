@@ -1,17 +1,14 @@
 import React from 'react';
 import './App.css';
 import Game from './components/Game';
-import headerImage from './assets/images/beeware-header.png';
-import borderImage from './assets/images/beeware-border.png';
-import BackgroundEffects from './components/background/BackgroundEffects';
-import './components/background/OrbAnimations.css';
+
+// Define public paths for images
+const headerImage = '/bee-ware/assets/images/beeware-header.png';
+const borderImage = '/bee-ware/assets/images/beeware-border.png';
 
 const App: React.FC = () => {
   return (
     <div className="App">
-      {/* Background effects rendered as React components */}
-      <BackgroundEffects />
-      
       <main>
         <div className="game-border-container">
           <img 
