@@ -1,6 +1,6 @@
 # Bee-ware
 
-A simplified Vampire Survivors-like game built with React and React-Konva.
+A simplified Vampire Survivors-like game built with React and Phaser 3.
 
 ## Description
 
@@ -10,7 +10,7 @@ This is a browser-based, top-down view game where the player character automatic
 - Enemy spawning in waves
 - Automatic player attacks (firing projectiles)
 - Basic level-up choices
-- Score tracking
+- Experience and leveling system
 - Player and enemy health systems
 - Game over state
 
@@ -42,7 +42,8 @@ npm run dev
 ## Tech Stack
 
 - React
-- React-Konva (for HTML5 Canvas rendering)
+- Phaser 3 (game framework)
+- TypeScript
 - Vite (build tool)
 
 ## Project Structure
@@ -50,14 +51,17 @@ npm run dev
 ```
 bee-ware/
 ├── public/             # Static assets
+│   └── assets/         # Game assets (sprites, sounds)
 ├── src/
-│   ├── assets/         # Game assets (sprites, sounds)
-│   │   └── sprites/    # Character and enemy sprites
+│   ├── phaser/         # Phaser game code
+│   │   ├── config/     # Game configuration
+│   │   ├── entities/   # Game entities (player, enemies)
+│   │   ├── scenes/     # Game scenes
+│   │   ├── systems/    # Game systems (enemies, projectiles, etc.)
+│   │   └── ui/         # UI components
 │   ├── components/     # React components
-│   │   └── Game.jsx    # Main game component
-│   ├── game/           # Game logic
-│   ├── App.jsx         # Main App component
-│   └── main.jsx        # Entry point
+│   ├── App.tsx         # Main App component
+│   └── main.tsx        # Entry point
 └── package.json        # Dependencies and scripts
 ```
 
