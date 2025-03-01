@@ -1,105 +1,382 @@
 import Phaser from 'phaser';
+import { Player } from '../entities/Player';
+import { EnemySystem } from '../systems/EnemySystem';
+import { GameUI } from '../ui/GameUI';
+import { AssetManager } from '../systems/AssetManager';
+import { ProjectileSystem } from '../systems/ProjectileSystem';
+import { ExperienceSystem } from '../systems/ExperienceSystem';
+import { UpgradeSystem } from '../systems/UpgradeSystem';
+import { UpgradeUI } from '../ui/UpgradeUI';
+import { GAME_CONFIG } from '../config/GameConfig';
 
+/**
+ * Main game scene that coordinates all game systems and entities
+ */
 export default class MainScene extends Phaser.Scene {
-  private player!: Phaser.Physics.Arcade.Sprite;
-  private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
-  private wasdKeys!: {
-    W: Phaser.Input.Keyboard.Key;
-    A: Phaser.Input.Keyboard.Key;
-    S: Phaser.Input.Keyboard.Key;
-    D: Phaser.Input.Keyboard.Key;
-  };
-  private playerSpeed: number = 300;
+  // Core systems
+  private assetManager!: AssetManager;
+  private player!: Player;
+  private enemySystem!: EnemySystem;
+  private projectileSystem!: ProjectileSystem;
+  private experienceSystem!: ExperienceSystem;
+  private upgradeSystem!: UpgradeSystem;
+  private gameUI!: GameUI;
+  private upgradeUI!: UpgradeUI;
+  
+  // Game state
+  private isPaused: boolean = false;
+  
+  // Performance tracking
+  private perfText!: Phaser.GameObjects.Text;
+  private lastFpsUpdate: number = 0;
 
   constructor() {
     super({ key: 'MainScene' });
   }
 
-  preload() {
-    this.load.image('player', 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAABGdBTUEAALGPC/xhBQAAACBjSFJNAAB6JgAAgIQAAPoAAACA6AAAdTAAAOpgAAA6mAAAF3CculE8AAAABmJLR0QA/wD/AP+gvaeTAAAAB3RJTUUH5AoEFSw76XxeigAAABJQTFRFAAAApxifpxifpxifpxifpxifi5MtmAAAAAV0Uk5TAP//8A5t+68AAAABYktHRACIBR1IAAAACXBIWXMAAA7EAAAOxAGVKw4bAAAAFUlEQVRIx2NgGAWjYBSMglEwCoYlAAAfgAABRDl7AgAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAyMC0xMC0wNFQyMTo0NDo1OSswMDowMIYnMV8AAAAldEVYdGRhdGU6bW9kaWZ5ADIwMjAtMTAtMDRUMjE6NDQ6NTkrMDA6MDD3eondAAAAAElFTkSuQmCC');
+  /**
+   * Preload all game assets
+   */
+  preload(): void {
+    // Initialize asset manager and load assets
+    this.assetManager = new AssetManager(this);
+    this.assetManager.preloadAssets();
     
-    this.load.image('background', 'assets/images/bg.png');
+    // Create a circular texture for projectiles
+    this.createProjectileTexture();
+  }
+  
+  /**
+   * Create a circular texture for projectiles
+   */
+  private createProjectileTexture(): void {
+    const graphics = this.make.graphics({ x: 0, y: 0 });
+    
+    // Draw a filled circle
+    graphics.fillStyle(0xffffff); // White (will be tinted later)
+    graphics.fillCircle(8, 8, 8); // 16x16 circle
+    
+    // Generate texture from graphics
+    graphics.generateTexture(GAME_CONFIG.PROJECTILE.PLAYER.KEY, 16, 16);
+    graphics.destroy();
+    
+    // Verify the texture was created
+    if (!this.textures.exists(GAME_CONFIG.PROJECTILE.PLAYER.KEY)) {
+      console.error(`Failed to create projectile texture: ${GAME_CONFIG.PROJECTILE.PLAYER.KEY}`);
+    }
   }
 
-  create() {
-    this.createWorld();
+  /**
+   * Create game objects and initialize systems
+   */
+  create(): void {
+    // Create the game world
+    this.assetManager = new AssetManager(this);
+    this.assetManager.createWorld();
     
-    this.createPlayer();
+    // Get the center coordinates for player placement
+    const centerX = this.assetManager.getCameraWidth() / 2;
+    const centerY = this.assetManager.getCameraHeight() / 2;
     
-    this.setupInput();
+    // Ensure projectile texture exists before creating the system
+    if (!this.textures.exists(GAME_CONFIG.PROJECTILE.PLAYER.KEY)) {
+      this.createProjectileTexture();
+    }
     
-    this.add.text(16, 16, 'Use WASD or Arrow keys to move', {
-      fontSize: '18px',
-      color: '#ffffff',
-      strokeThickness: 2,
-      stroke: '#000000'
+    // Create projectile system
+    this.projectileSystem = new ProjectileSystem(this);
+    
+    // Create player at center of screen
+    this.player = new Player(this, centerX, centerY);
+    
+    // Set up player attacks
+    this.player.setupAttacks(this.projectileSystem);
+    
+    // Create enemy system targeting the player
+    this.enemySystem = new EnemySystem(this, this.player.getSprite(), this.player);
+    
+    // Create experience system
+    this.experienceSystem = new ExperienceSystem(this, this.player.getSprite());
+    
+    // Connect enemy system to experience system
+    this.enemySystem.setExperienceSystem(this.experienceSystem);
+    
+    // Create upgrade system
+    this.upgradeSystem = new UpgradeSystem(this, this.player, this.projectileSystem);
+    
+    // Set up optimized collisions
+    this.setupCollisions();
+    
+    // Create game UI
+    this.gameUI = new GameUI(this);
+    
+    // Create upgrade UI
+    this.upgradeUI = new UpgradeUI(this, this.upgradeSystem);
+    
+    // Listen for upgrade UI events
+    this.events.on('show-upgrade-ui', this.showUpgradeUI, this);
+    
+    // Listen for player level up events to adjust enemy spawn rate
+    this.events.on('player-level-up', this.onPlayerLevelUp, this);
+    
+    // Add performance monitor
+    this.perfText = this.add.text(10, this.cameras.main.height - 30, 'FPS: 0', {
+      fontSize: '16px',
+      color: '#00ff00',
+      backgroundColor: '#000000'
+    });
+    this.perfText.setScrollFactor(0);
+  }
+
+  /**
+   * Set up optimized collision detection between game objects
+   */
+  private setupCollisions(): void {
+    // We'll use overlap instead of collider for better control
+    // and only check collisions between visible enemies and player
+    
+    // Basic physics collisions between enemies for minimal physics interactions
+    this.physics.add.collider(
+      this.enemySystem.getEnemyGroup(),
+      this.enemySystem.getEnemyGroup(),
+      undefined,
+      // Only perform collision for visible enemies that are close to each other 
+      this.filterEnemyCollisions as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
+      this
+    );
+    
+    // Set up projectile-enemy collisions for each projectile type
+    const projectileGroup = this.projectileSystem.getProjectileGroup(GAME_CONFIG.PROJECTILE.PLAYER.KEY);
+    
+    if (projectileGroup) {
+      this.physics.add.overlap(
+        projectileGroup,
+        this.enemySystem.getEnemyGroup(),
+        this.handleProjectileEnemyCollision as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
+        // Only check collisions for active projectiles and enemies
+        (projectile, enemy) => {
+          return (projectile as Phaser.Physics.Arcade.Sprite).active && 
+                 (enemy as Phaser.Physics.Arcade.Sprite).active;
+        },
+        this
+      );
+    }
+  }
+  
+  /**
+   * Handle collision between projectile and enemy
+   */
+  private handleProjectileEnemyCollision(
+    projectile: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
+    enemy: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile
+  ): void {
+    const p = projectile as Phaser.Physics.Arcade.Sprite;
+    const e = enemy as Phaser.Physics.Arcade.Sprite;
+    
+    // Deactivate the projectile
+    this.projectileSystem.deactivateProjectile(p);
+    
+    // Get damage value from projectile
+    const damage = (p as any).damage || 1;
+    
+    // Apply damage to enemy with knockback
+    const wasDefeated = this.enemySystem.damageEnemy(
+      e, 
+      damage, 
+      GAME_CONFIG.ENEMY.KNOCKBACK_FORCE
+    );
+    
+    // If enemy wasn't defeated, we can add additional visual feedback
+    if (!wasDefeated) {
+      // Flash the enemy (additional visual feedback)
+      this.tweens.add({
+        targets: e,
+        alpha: 0.5,
+        duration: 50,
+        yoyo: true,
+        repeat: 1
+      });
+    }
+  }
+  
+  /**
+   * Custom filter to optimize enemy-enemy collisions
+   * Only performs collision checks when necessary
+   */
+  private filterEnemyCollisions(
+    enemy1: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile,
+    enemy2: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Tilemaps.Tile
+  ): boolean {
+    // Skip collision checks between enemies that are far apart
+    // This greatly reduces the number of collision checks
+    const e1 = enemy1 as Phaser.Physics.Arcade.Sprite;
+    const e2 = enemy2 as Phaser.Physics.Arcade.Sprite;
+    
+    // Skip inactive enemies
+    if (!e1.active || !e2.active) {
+      return false;
+    }
+    
+    // Calculate squared distance
+    const dx = e1.x - e2.x;
+    const dy = e1.y - e2.y;
+    const distSquared = dx * dx + dy * dy;
+    
+    // Only collide if they're close enough (avoid sqrt for performance)
+    // Assuming enemies are about 32 pixels wide
+    const collisionThreshold = 64; // 2x enemy width
+    
+    return distSquared < (collisionThreshold * collisionThreshold);
+  }
+
+  /**
+   * Check for collisions between player and enemies
+   */
+  private checkPlayerEnemyCollisions(): void {
+    // Get visible enemies
+    const enemies = this.enemySystem.getVisibleEnemies();
+    
+    // Check if player is overlapping with any enemies
+    let isOverlapping = false;
+    
+    for (const enemy of enemies) {
+      if (Phaser.Geom.Intersects.RectangleToRectangle(
+        this.player.getSprite().getBounds(),
+        enemy.getBounds()
+      )) {
+        isOverlapping = true;
+        break;
+      }
+    }
+    
+    // Update player's overlapping state
+    this.player.setOverlapping(isOverlapping);
+  }
+
+  /**
+   * Show the upgrade UI and pause the game
+   */
+  private showUpgradeUI(): void {
+    // Pause the game
+    this.pauseGame();
+    
+    // Show upgrade UI
+    this.upgradeUI.show(3, (upgradeId: string) => {
+      // Apply the selected upgrade
+      if (upgradeId) {
+        this.upgradeSystem.applyUpgrade(upgradeId);
+      }
+      
+      // Resume the game
+      this.resumeGame();
+      
+      // Notify player that upgrade is complete
+      this.player.onUpgradeSelected();
     });
   }
-
-  createWorld() {
-    const width = this.cameras.main!.width;
-    const height = this.cameras.main!.height;
+  
+  /**
+   * Pause the game
+   */
+  private pauseGame(): void {
+    this.isPaused = true;
     
-    this.add.image(width / 2, height / 2, 'background')
-      .setDisplaySize(width, height);
-      
-    this.physics.world.setBounds(0, 0, width, height);
+    // Pause physics
+    this.physics.pause();
+    
+    // Pause all timers
+    this.time.paused = true;
+  }
+  
+  /**
+   * Resume the game
+   */
+  private resumeGame(): void {
+    this.isPaused = false;
+    
+    // Resume physics
+    this.physics.resume();
+    
+    // Resume all timers
+    this.time.paused = false;
   }
 
-  createPlayer() {
-    const centerX = this.cameras.main!.width / 2;
-    const centerY = this.cameras.main!.height / 2;
+  /**
+   * Main update loop
+   */
+  update(time: number, _delta: number): void {
+    // Skip update if game is paused
+    if (this.isPaused) return;
     
-    this.player = this.physics.add.sprite(centerX, centerY, 'player');
-    this.player.setScale(0.5);
-    this.player.setDepth(10); // Ensure player is above other elements
+    // Update player
+    this.player.update();
     
-    this.player.setCollideWorldBounds(true);
-    this.player.body!.setSize(this.player.width * 0.8, this.player.height * 0.8); // Slightly smaller hitbox
-    this.player.setDamping(false);
-    this.player.setDrag(0);
-  }
-
-  setupInput() {
-    this.cursors = this.input.keyboard!.createCursorKeys();
+    // Update enemy system
+    this.enemySystem.update();
     
-    this.wasdKeys = {
-      W: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.W),
-      A: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.A),
-      S: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.S),
-      D: this.input.keyboard!.addKey(Phaser.Input.Keyboard.KeyCodes.D)
-    };
-  }
-
-  update() {
-    this.handlePlayerMovement();
-  }
-
-  handlePlayerMovement() {
-    let dirX = 0;
-    let dirY = 0;
+    // Update experience system
+    this.experienceSystem.update();
     
-    if (this.wasdKeys.A.isDown || this.cursors.left!.isDown) {
-      dirX = -1;
-    } else if (this.wasdKeys.D.isDown || this.cursors.right!.isDown) {
-      dirX = 1;
+    // Update projectile system
+    this.projectileSystem.update();
+    
+    // Check for collisions between player and enemies
+    this.checkPlayerEnemyCollisions();
+    
+    // Update UI elements
+    this.updateUI();
+    
+    // Update FPS counter every 500ms
+    if (time - this.lastFpsUpdate > 500) {
+      this.updateFpsCounter();
+      this.lastFpsUpdate = time;
     }
+  }
+
+  /**
+   * Update UI elements
+   */
+  private updateUI(): void {
+    // Update enemy count
+    this.gameUI.updateEnemyCount(this.enemySystem.getEnemyCount());
     
-    if (this.wasdKeys.W.isDown || this.cursors.up!.isDown) {
-      dirY = -1;
-    } else if (this.wasdKeys.S.isDown || this.cursors.down!.isDown) {
-      dirY = 1;
-    }
+    // Update player health
+    this.gameUI.updateHealth(this.player.getHealth(), this.player.getMaxHealth());
     
-    if (dirX !== 0 && dirY !== 0) {
-      const length = Math.sqrt(dirX * dirX + dirY * dirY);
-      dirX /= length;
-      dirY /= length;
-    }
+    // Update player level
+    this.gameUI.updateLevel(this.player.getLevel());
     
-    this.player.setVelocity(
-      dirX * this.playerSpeed,
-      dirY * this.playerSpeed
+    // Update experience bar
+    this.gameUI.updateExperience(
+      this.player.getExperience(),
+      this.player.getExperienceToNextLevel(),
+      this.player.getLevel()
     );
+  }
+
+  /**
+   * Update the FPS counter
+   */
+  private updateFpsCounter(): void {
+    this.perfText.setText(`FPS: ${Math.round(this.game.loop.actualFps)} | Enemies: ${this.enemySystem.getEnemyCount()} | Level: ${this.player.getLevel()}`);
+  }
+
+  /**
+   * Clean up resources before scene shutdown
+   */
+  shutdown(): void {
+    // Remove event listeners
+    this.events.off('show-upgrade-ui', this.showUpgradeUI, this);
+    this.events.off('player-level-up', this.onPlayerLevelUp, this);
+  }
+
+  /**
+   * Handle player level up event
+   */
+  private onPlayerLevelUp(level: number): void {
+    // Update enemy spawn rate based on new player level
+    this.enemySystem.updateSpawnRate();
+    
+    console.log(`Player reached level ${level}! Adjusting enemy spawn rate.`);
   }
 } 

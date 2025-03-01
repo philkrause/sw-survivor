@@ -11,4 +11,20 @@ declare module '*.jpg' {
 declare module '*.svg' {
   const content: string;
   export default content;
+}
+
+const GAME_CONFIG = {
+  PLAYER: {
+    SPEED: 300,
+    SCALE: 0.5,
+    DEPTH: 10
+  },
+  ENEMY: {
+    SPEED: 100,
+    SCALE: 0.4,
+    DEPTH: 5,
+    SPAWN_INTERVAL: 1000,
+    MAX_COUNT: 50,
+    SPAWN_PADDING: 20
+  }
 } 
