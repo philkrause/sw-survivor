@@ -63,7 +63,7 @@ main {
 
 .game-header {
   position: absolute;
-  top: 60px;
+  top: 30px;
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 3000;

@@ -3,17 +3,19 @@ import Phaser from 'phaser';
 /**
  * Configuration for projectile pools
  */
-export interface ProjectilePoolConfig {
-  key: string;           // Texture key for this type of projectile
-  maxSize: number;       // Maximum number of this projectile type
-  speed: number;         // Movement speed
-  lifespan: number;      // How long the projectile lives in ms
-  scale: number;         // Visual scale
-  depth: number;         // Render depth
-  tint?: number;         // Optional color tint
-  damage?: number;       // Damage value
-  rotateToDirection?: boolean; // Whether projectile should rotate to face movement direction
+export interface ProjectileConfig {
+  key: string;
+  speed: number;
+  lifespan: number;
+  scale: number;
+  damage: number;
+  rotateToDirection: boolean;
+  maxSize: number;
+  maxCount: number;
+  tint?: number;
+  depth: number;
 }
+
 
 /**
  * Manages efficient creation and recycling of game projectiles
@@ -21,26 +23,26 @@ export interface ProjectilePoolConfig {
  */
 export class ProjectileSystem {
   private scene: Phaser.Scene;
-  private projectilePools: Map<string, Phaser.Physics.Arcade.Group> = new Map();
-  private poolConfigs: Map<string, ProjectilePoolConfig> = new Map();
-  
-  // Optimization: Reuse vector calculations to reduce garbage collection
-  private vectorBuffer = { x: 0, y: 0 };
+  public pools: Map<string, Phaser.Physics.Arcade.Group> = new Map();
+  private configs: Map<string, ProjectileConfig> = new Map();
+  private vectorBuffer = new Phaser.Math.Vector2();
   private visibleProjectiles: Phaser.Physics.Arcade.Sprite[] = [];
-  private cameraRect: Phaser.Geom.Rectangle = new Phaser.Geom.Rectangle();
-  
+
+
+
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
+
+    // Get the camera's world view dimensions
+    const camera = this.scene.cameras.main;
+    console.log( `Camera dimensions: ${camera.width}x${camera.height}`);
   }
-  
-  /**
-   * Create a new projectile pool of a specific type
-   */
-  createPool(config: ProjectilePoolConfig): void {
-    // Store config for later reference
-    this.poolConfigs.set(config.key, config);
-    
-    // Create physics group for this projectile type
+
+
+
+  createPool(config: ProjectileConfig): void {
+    this.configs.set(config.key, config);
+
     const group = this.scene.physics.add.group({
       classType: Phaser.Physics.Arcade.Sprite,
       maxSize: config.maxSize,
@@ -48,214 +50,173 @@ export class ProjectileSystem {
       visible: false,
       key: config.key
     });
-    
-    // Pre-populate pool with inactive projectiles
+
     for (let i = 0; i < config.maxSize; i++) {
       const projectile = group.create(0, 0, config.key) as Phaser.Physics.Arcade.Sprite;
-      
+
       // Make sure projectile is not null before configuring
       if (projectile) {
-        this.configureProjectile(projectile, config);
+        //this.configureProjectile(projectile, config);
         projectile.setActive(false);
         projectile.setVisible(false);
-        
+
+        if (projectile.body)
+          projectile.body.enable = false; // Disable physics body
+
         // Store lifespan data in a custom property
         (projectile as any).lifespan = config.lifespan;
         (projectile as any).createdAt = 0;
       }
     }
-    
-    this.projectilePools.set(config.key, group);
+
+
+    this.pools.set(config.key, group);
   }
-  
-  /**
-   * Configure a projectile with its base properties
-   */
+
   private configureProjectile(
-    projectile: Phaser.Physics.Arcade.Sprite, 
-    config: ProjectilePoolConfig
+    projectile: Phaser.Physics.Arcade.Sprite,
+    config: ProjectileConfig
   ): void {
     projectile.setScale(config.scale);
     projectile.setDepth(config.depth);
-    
+
     if (config.tint !== undefined) {
       projectile.setTint(config.tint);
     }
-    
+
     // Store the projectile type on the instance for later reference
     (projectile as any).projectileType = config.key;
-    (projectile as any).damage = config.damage || 1;
     (projectile as any).rotateToDirection = config.rotateToDirection || false;
   }
-  
-  /**
-   * Fire a projectile from a specific position in a specific direction
-   */
-  fireProjectile(
-    type: string, 
-    x: number, 
-    y: number, 
-    directionX: number, 
-    directionY: number
+
+
+  fire(
+    key: string,
+    x: number,
+    y: number,
+    dirX: number,
+    dirY: number
   ): Phaser.Physics.Arcade.Sprite | null {
-    // Get the group for this projectile type
-    const group = this.projectilePools.get(type);
-    const config = this.poolConfigs.get(type);
-    
+    const group = this.pools.get(key);
+    const config = this.configs.get(key);
+
     if (!group || !config) {
-      console.warn(`Projectile pool for type "${type}" doesn't exist`);
+      console.log("GROUP OR CONFIG NOT FOUND", group, config);
       return null;
     }
-    
-    // Get an inactive projectile from the pool
+
     const projectile = group.get(x, y) as Phaser.Physics.Arcade.Sprite;
-    
     if (!projectile) {
-      // Pool is exhausted
+      console.warn("PROJECTILE IN GROUP NOT FOUND");
       return null;
     }
-    
-    // Activate and configure the projectile
-    projectile.setActive(true);
-    projectile.setVisible(true);
-    
-    // Ensure consistent appearance by re-applying scale and tint
-    projectile.setScale(config.scale);
-    if (config.tint !== undefined) {
-      projectile.setTint(config.tint);
+
+    // Reset and configure the projectile
+    projectile.setActive(true).setVisible(true);
+    if (projectile.body) {
+      projectile.body.enable = true; // Enable physics body
+      projectile.setVelocity(0, 0); // Reset velocity
     }
-    
-    // Normalize direction vector
-    this.vectorBuffer.x = directionX;
-    this.vectorBuffer.y = directionY;
-    
-    const length = Math.sqrt(
-      this.vectorBuffer.x * this.vectorBuffer.x +
-      this.vectorBuffer.y * this.vectorBuffer.y
-    );
-    
-    if (length > 0) {
-      this.vectorBuffer.x /= length;
-      this.vectorBuffer.y /= length;
+
+    projectile.setPosition(x, y); // Set position
+    projectile.setTexture(config.key); // Ensure the correct texture is applied
+
+    // Set velocity based on direction
+    const dir = this.vectorBuffer.set(dirX, dirY).normalize();
+    projectile.setVelocity(dir.x * config.speed, dir.y * config.speed);
+
+    // Set rotation if needed
+    if (config.rotateToDirection) {
+      projectile.setRotation(Math.atan2(dirY, dirX));
     }
-    
-    // Set velocity based on normalized direction and speed
-    projectile.setVelocity(
-      this.vectorBuffer.x * config.speed,
-      this.vectorBuffer.y * config.speed
-    );
-    
-    // Rotate projectile to face movement direction if needed
-    if ((projectile as any).rotateToDirection) {
-      projectile.rotation = Math.atan2(directionY, directionX);
-    }
-    
-    // Mark creation time for lifespan tracking
-    (projectile as any).createdAt = this.scene.time.now;
-    
+
+    // Set custom data
+    projectile.setData('lifespan', config.lifespan);
+    projectile.setData('createdAt', this.scene.time.now);
+    projectile.setData('damage', config.damage || 1);
+
     return projectile;
   }
-  
-  /**
-   * Update projectiles, handling lifespan and screen bounds
-   */
-  update(): void {
-    // Update camera rectangle for visibility checks
-    const camera = this.scene.cameras.main;
-    if (camera) {
-      this.cameraRect.setTo(
-        camera.scrollX - 50,
-        camera.scrollY - 50,
-        camera.width + 100,
-        camera.height + 100
-      );
-    }
-    
+
+  update(time: number): void {
     // Clear visible projectiles array
     this.visibleProjectiles.length = 0;
-    
+
+    // Get the camera's world bounds
+    const cameraBounds = this.scene.cameras.main.worldView;
+
     // Process each projectile pool
-    for (const [_, group] of this.projectilePools) {
-      // Update active projectiles in this group
+    for (const [_, group] of this.pools) {
       const projectiles = group.getChildren();
-      
       for (let i = 0; i < projectiles.length; i++) {
         const projectile = projectiles[i] as Phaser.Physics.Arcade.Sprite;
-        
+
+        // Skip inactive projectiles
         if (!projectile.active) continue;
-        
-        // Check lifespan
-        const lifespan = (projectile as any).lifespan;
-        const createdAt = (projectile as any).createdAt;
-        const age = this.scene.time.now - createdAt;
-        
-        if (age >= lifespan) {
-          this.deactivateProjectile(projectile);
+
+        if (
+          projectile.x < cameraBounds.left || // Off-screen (left)
+          projectile.x > cameraBounds.right || // Off-screen (right)
+          projectile.y < cameraBounds.top || // Off-screen (top)
+          projectile.y > cameraBounds.bottom // Off-screen (bottom)
+        ) {
+          console.log("PROJECTILE OFF SCREEN")
+          this.deactivate(projectile);
           continue;
         }
-        
-        // Check if the projectile is visible on screen
-        if (Phaser.Geom.Rectangle.Contains(this.cameraRect, projectile.x, projectile.y)) {
-          this.visibleProjectiles.push(projectile);
-        } else {
-          // Off-screen projectile - check if it's too far (cull distance)
-          const cullDistance = 300; // Pixels beyond screen edge to cull
-          
-          const minX = this.cameraRect.x - cullDistance;
-          const maxX = this.cameraRect.x + this.cameraRect.width + cullDistance;
-          const minY = this.cameraRect.y - cullDistance;
-          const maxY = this.cameraRect.y + this.cameraRect.height + cullDistance;
-          
-          if (projectile.x < minX || projectile.x > maxX || 
-              projectile.y < minY || projectile.y > maxY) {
-            // Projectile is too far off-screen, cull it
-            this.deactivateProjectile(projectile);
-          }
-        }
+
+        // Add to visible projectiles array if still active and on-screen
+        this.visibleProjectiles.push(projectile);
       }
     }
   }
-  
-  /**
-   * Deactivate a projectile and return it to its pool
-   */
-  deactivateProjectile(projectile: Phaser.Physics.Arcade.Sprite): void {
-    projectile.setActive(false);
-    projectile.setVisible(false);
-    projectile.setVelocity(0, 0);
+
+  deactivate(projectile: Phaser.Physics.Arcade.Sprite): void {
+    if (!projectile.active) {
+      // If the projectile is already inactive, skip deactivation
+      console.warn(`Attempted to deactivate an already inactive projectile at (${projectile.x}, ${projectile.y})`);
+      return;
+    }
+
+    // Mark the projectile as inactive and invisible
+    projectile.setActive(false).setVisible(false);
+
+    if (projectile.body) {
+      projectile.body.enable = false; // Disable physics body
+      projectile.setVelocity(0, 0); // Reset velocity
+    }
+
   }
-  
-  /**
-   * Get all visible projectiles for collision checks
-   */
+
   getVisibleProjectiles(): Phaser.Physics.Arcade.Sprite[] {
     return this.visibleProjectiles;
   }
-  
-  /**
-   * Get a specific projectile group
-   */
-  getProjectileGroup(type: string): Phaser.Physics.Arcade.Group | undefined {
-    return this.projectilePools.get(type);
+
+
+  // /**
+  //  * Get a specific projectile group
+  //  */
+  getProjectileGroup(key: string): Phaser.Physics.Arcade.Group | undefined {
+    return this.pools.get(key);
   }
-  
-  /**
-   * Get all projectile groups
-   */
+
+  // /**
+  //  * Get all projectile groups
+  //  */
   getAllProjectileGroups(): Phaser.Physics.Arcade.Group[] {
-    return Array.from(this.projectilePools.values());
+    return Array.from(this.pools.values());
   }
-  
-  /**
-   * Clean up all projectiles
-   */
+
+  // /**
+  //  * Clean up all projectiles
+  //  */
   cleanup(): void {
-    for (const [_, group] of this.projectilePools) {
+    for (const [_, group] of this.pools) {
       const projectiles = group.getChildren();
-      
+
       for (let i = 0; i < projectiles.length; i++) {
         const projectile = projectiles[i] as Phaser.Physics.Arcade.Sprite;
-        this.deactivateProjectile(projectile);
+        this.deactivate(projectile);
       }
     }
   }

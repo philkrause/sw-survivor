@@ -6,9 +6,9 @@ import { GAME_CONFIG } from '../config/GameConfig';
  */
 export class GameUI {
   private scene: Phaser.Scene;
-  private enemyCountText: Phaser.GameObjects.Text;
-  private healthText: Phaser.GameObjects.Text;
-  private levelText: Phaser.GameObjects.Text;
+  //private enemyCountText: Phaser.GameObjects.Text;
+  //private healthText: Phaser.GameObjects.Text;
+ // private levelText: Phaser.GameObjects.Text;
   private experienceBar: Phaser.GameObjects.Graphics;
   private healthBar: Phaser.GameObjects.Graphics;
   
@@ -16,10 +16,10 @@ export class GameUI {
     this.scene = scene;
     
     // Create UI elements
-    this.createInstructionText();
-    this.enemyCountText = this.createEnemyCounterText();
-    this.healthText = this.createHealthText();
-    this.levelText = this.createLevelText();
+    //this.createInstructionText();
+    //this.enemyCountText = this.createEnemyCounterText();
+    //this.healthText = this.createHealthText();
+    //this.levelText = this.createLevelText();
     this.healthBar = this.createHealthBar();
     this.experienceBar = this.createExperienceBar();
     
@@ -47,23 +47,23 @@ export class GameUI {
   /**
    * Create a text display for the enemy counter
    */
-  private createEnemyCounterText(): Phaser.GameObjects.Text {
-    return this.scene.add.text(16, 112, 'Enemies: 0', GAME_CONFIG.UI.TEXT_STYLE);
-  }
+  // private createEnemyCounterText(): Phaser.GameObjects.Text {
+  //   return this.scene.add.text(16, 112, 'Enemies: 0', GAME_CONFIG.UI.TEXT_STYLE);
+  // }
   
   /**
    * Create a text display for player health
    */
-  private createHealthText(): Phaser.GameObjects.Text {
-    return this.scene.add.text(16, 136, 'Health: 100/100', GAME_CONFIG.UI.TEXT_STYLE);
-  }
+  // private createHealthText(): Phaser.GameObjects.Text {
+  //   return this.scene.add.text(16, 136, 'Health: 100/100', GAME_CONFIG.UI.TEXT_STYLE);
+  // }
   
   /**
    * Create a text display for player level
    */
-  private createLevelText(): Phaser.GameObjects.Text {
-    return this.scene.add.text(16, 160, 'Level: 1', GAME_CONFIG.UI.TEXT_STYLE);
-  }
+  // private createLevelText(): Phaser.GameObjects.Text {
+  //   return this.scene.add.text(16, 160, 'Level: 1', GAME_CONFIG.UI.TEXT_STYLE);
+  // }
   
   /**
    * Create a health bar
@@ -88,15 +88,15 @@ export class GameUI {
   /**
    * Update the enemy counter display
    */
-  updateEnemyCount(count: number): void {
-    this.enemyCountText.setText(`Enemies: ${count}`);
-  }
+  // updateEnemyCount(count: number): void {
+  //   this.enemyCountText.setText(`Enemies: ${count}`);
+  // }
   
   /**
    * Update the health display
    */
   updateHealth(current: number, max: number): void {
-    this.healthText.setText(`Health: ${current}/${max}`);
+    //this.healthText.setText(`Health: ${current}/${max}`);
     this.updateHealthBar(current, max);
   }
   
@@ -162,9 +162,9 @@ export class GameUI {
   /**
    * Update the level display
    */
-  updateLevel(level: number): void {
-    this.levelText.setText(`Level: ${level}`);
-  }
+  // updateLevel(level: number): void {
+  //   this.levelText.setText(`Level: ${level}`);
+  // }
   
   /**
    * Update the experience bar
@@ -221,7 +221,7 @@ export class GameUI {
    */
   private onPlayerLevelUp(level: number): void {
     // Update level text
-    this.updateLevel(level);
+    //this.updateLevel(level);
     
     // Show level up message
     this.showMessage(`Level Up! ${level}`, 2000);

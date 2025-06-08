@@ -23,8 +23,8 @@ const GAME_CONFIG = {
     SPEED: 100,
     SCALE: 0.4,
     DEPTH: 5,
-    SPAWN_INTERVAL: 1000,
-    MAX_COUNT: 50,
+    SPAWN_INTERVAL: 10,
+    MAX_COUNT: 1000,
     SPAWN_PADDING: 20
   }
 } 

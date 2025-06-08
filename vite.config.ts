@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  base: '/bee-ware/', // Base path for GitHub Pages deployment
+  base: '/starwars-survivor/', // Base path for GitHub Pages deployment
   server: {
     host: '127.0.0.1',
     port: 3000,

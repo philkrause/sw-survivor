@@ -22,11 +22,14 @@ const Game: React.FC = () => {
         default: 'arcade',
         arcade: {
           gravity: { x: 0, y: 0 },
-          debug: false
+          debug: false,
         }
       },
+      roundPixels: true,
+      pixelArt: true,
       backgroundColor: '#1d1805',
-      scene: [MainScene]
+      zoom: 1,
+      scene: [MainScene],
     };
 
     // Create new game instance

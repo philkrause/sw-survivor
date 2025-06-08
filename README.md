@@ -1,4 +1,4 @@
-# Bee-ware
+# starwars-survivor
 
 A simplified Vampire Survivors-like game built with React and Phaser 3.
 
@@ -30,7 +30,7 @@ This project was bootstrapped with Vite.
 git clone [repository-url]
 
 # Navigate to the project directory
-cd bee-ware
+cd starwars-survivor
 
 # Install dependencies
 npm install
@@ -49,7 +49,7 @@ npm run dev
 ## Project Structure
 
 ```
-bee-ware/
+starwars-survivor/
 ├── public/             # Static assets
 │   └── assets/         # Game assets (sprites, sounds)
 ├── src/

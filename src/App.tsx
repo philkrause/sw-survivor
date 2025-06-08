@@ -3,8 +3,8 @@ import './styles/App.css';
 import Game from './components/Game';
 
 // Define public paths for images
-const headerImage = '/bee-ware/assets/images/ui/beeware-header.png';
-const borderImage = '/bee-ware/assets/images/ui/beeware-border.png';
+const headerImage = '/starwars-survivor/assets/images/ui/header.png';
+const borderImage = '/starwars-survivor/assets/images/ui/border.png';
 
 const App: React.FC = () => {
   return (
@@ -19,7 +19,7 @@ const App: React.FC = () => {
           <div className="game-header">
             <img 
               src={headerImage} 
-              alt="Bee-Ware" 
+              alt="starwars-survivor" 
               className="header-image"
             />
           </div>
