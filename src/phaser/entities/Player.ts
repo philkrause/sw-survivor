@@ -50,10 +50,12 @@ export class Player {
   private forceStrengthMultiplier: number = 1.0;
   public forceDamageMultiplier: number = 1.0;
 
-  private baseProjectileDamage: number = 15;
-  private damageMultiplier: number = 1.0;
+  private baseBlasterDamage: number = 15;
+  private damageBlasterMultiplier: number = 1.0;
   private baseAttackInterval: number = GAME_CONFIG.PLAYER.ATTACK_INTERVAL;
-  private attackSpeedMultiplier: number = 1.0;
+  private baseBlasterAttackInterval: number = 200;
+
+  private blasterSpeedMultiplier: number = .25;
   private projectileCount: number = 1;
   private projectileSizeMultiplier: number = 1.0;
   private lastDirection: Phaser.Math.Vector2 = new Phaser.Math.Vector2(1, 0); // Default facing right
@@ -96,24 +98,24 @@ export class Player {
     console.log("Projectile pool initialized for player");
     if (this.projectileSystem) {
       this.projectileSystem.createPool({
-        key: GAME_CONFIG.PROJECTILE.PLAYER.KEY,
-        speed: GAME_CONFIG.PROJECTILE.PLAYER.SPEED,
-        lifespan: GAME_CONFIG.PROJECTILE.PLAYER.LIFESPAN,
-        scale: GAME_CONFIG.PROJECTILE.PLAYER.SCALE,
-        depth: GAME_CONFIG.PROJECTILE.PLAYER.DEPTH,
-        damage: GAME_CONFIG.PROJECTILE.PLAYER.DAMAGE,
-        rotateToDirection: GAME_CONFIG.PROJECTILE.PLAYER.ROTATEWITHDIRECTION,
-        maxSize: GAME_CONFIG.PROJECTILE.PLAYER.MAX_COUNT,
-        maxCount: GAME_CONFIG.PROJECTILE.PLAYER.MAX_COUNT,
-        tint: GAME_CONFIG.PROJECTILE.PLAYER.TINT
+        key: GAME_CONFIG.BLASTER.PLAYER.KEY,
+        speed: GAME_CONFIG.BLASTER.PLAYER.SPEED,
+        lifespan: GAME_CONFIG.BLASTER.PLAYER.LIFESPAN,
+        scale: GAME_CONFIG.BLASTER.PLAYER.SCALE,
+        depth: GAME_CONFIG.BLASTER.PLAYER.DEPTH,
+        damage: GAME_CONFIG.BLASTER.PLAYER.DAMAGE,
+        rotateToDirection: GAME_CONFIG.BLASTER.PLAYER.ROTATEWITHDIRECTION,
+        maxSize: GAME_CONFIG.BLASTER.PLAYER.MAX_COUNT,
+        maxCount: GAME_CONFIG.BLASTER.PLAYER.MAX_COUNT,
+        tint: GAME_CONFIG.BLASTER.PLAYER.TINT
       });
     }
 
 
     // Start attack timer
     this.attackTimer = this.scene.time.addEvent({
-      delay: this.getAttackInterval(),
-      callback: () => this.fireProjectile(GAME_CONFIG.PROJECTILE.PLAYER.KEY),
+      delay: this.getBlasterAttackInterval(),
+      callback: () => this.fireProjectile(GAME_CONFIG.BLASTER.PLAYER.KEY),
       callbackScope: this,
       loop: true
     });
@@ -161,7 +163,7 @@ export class Player {
       const spreadDirY = Math.sin(angle);
       // Fire projectile with current damage and size
       const projectile = this.projectileSystem.fire(
-        GAME_CONFIG.PROJECTILE.PLAYER.KEY,
+        GAME_CONFIG.BLASTER.PLAYER.KEY,
         playerPos.x,
         playerPos.y,
         spreadDirX,
@@ -170,8 +172,8 @@ export class Player {
 
       // Set damage and size for the projectile
       if (projectile) {
-        (projectile as any).damage = this.getProjectileDamage();
-        projectile.setScale(GAME_CONFIG.PROJECTILE.PLAYER.SCALE * this.projectileSizeMultiplier)
+        (projectile as any).damage = this.getBlasterDamage();
+        projectile.setScale(GAME_CONFIG.BLASTER.PLAYER.SCALE * this.projectileSizeMultiplier)
 
       }
     }
@@ -604,16 +606,26 @@ export class Player {
    * Increase player's attack speed
    */
   increaseBlasterSpeed(multiplier: number): void {
-    this.attackSpeedMultiplier += multiplier;
+    this.blasterSpeedMultiplier += multiplier;
+    console.log("Blaster attack speed multiplier: " + this.blasterSpeedMultiplier);
 
     // Update attack timer
     if (this.attackTimer) {
-      this.attackTimer.destroy();
+      this.attackTimer.destroy(); // Destroy the existing timer
     }
 
-    console.log(`Attack speed increased to ${1 / this.getAttackInterval() * 1000} attacks/sec`);
-  }
+    const newInterval = this.getBlasterAttackInterval(); // Get the updated interval
+    console.log(`Blaster speed increased to ${(1 / newInterval) * 1000} attacks/sec`);
 
+    // Recreate the attack timer with the updated interval
+    this.attackTimer = this.scene.time.addEvent({
+      delay: this.getBlasterAttackInterval(),
+      callback: () => this.fireProjectile(GAME_CONFIG.PROJECTILE.PLAYER.KEY),
+      callbackScope: this,
+      loop: true
+    });
+
+  }
   //************** */ UPGRADES ****************
 
 
@@ -621,9 +633,9 @@ export class Player {
   /**
    * Get current attack interval in ms
    */
-  getAttackInterval(): number {
+  getBlasterAttackInterval(): number {
     // Lower interval means faster attacks
-    return this.baseAttackInterval / this.attackSpeedMultiplier;
+    return this.baseBlasterAttackInterval / this.blasterSpeedMultiplier;
   }
 
 
@@ -721,13 +733,14 @@ export class Player {
     return this.hasBlasterUpgrade;
   }
 
-  getProjectileDamage(): number {
-    return this.baseProjectileDamage * this.damageMultiplier;
+  getBlasterDamage(): number {
+    console.log(`Blaster DAMAGE: ${this.baseBlasterDamage * (1*this.damageBlasterMultiplier)}`)
+    return this.baseBlasterDamage * (1*this.damageBlasterMultiplier);
   }
 
-  increaseProjectileDamage(multiplier: number): void {
-    this.damageMultiplier += multiplier;
-    console.log(`Damage increased to ${this.getProjectileDamage()}`);
+  increaseBlasterDamage(multiplier: number): void {
+    this.damageBlasterMultiplier += multiplier;
+    console.log(`Blaster damage increased to ${this.getBlasterDamage()}`);
   }
 
 

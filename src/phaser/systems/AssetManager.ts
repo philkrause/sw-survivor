@@ -31,7 +31,7 @@ export class AssetManager {
 
     this.scene.load.image('blue_slash', 'assets/images/game/blue_slash_inv.png');
 
-    this.scene.load.image('laser', 'assets/images/game/laser.png');
+    this.scene.load.image('blaster', 'assets/images/game/laser.png');
 
     this.scene.load.spritesheet('force_anim', 'assets/images/game/force_anim1.png', {
       frameWidth: 48,

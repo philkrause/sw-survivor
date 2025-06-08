@@ -48,9 +48,9 @@ export const GAME_CONFIG = {
     PULSE_DURATION: 1000, // ms for pulse animation
     PULSE_SCALE: 1.2 // Maximum scale during pulse
   },
-  PROJECTILE: {
+  BLASTER: {
     PLAYER: {
-      KEY: 'laser',
+      KEY: 'blaster',
       SPEED: 500,
       LIFESPAN: 200, // ms
       SCALE: 1,

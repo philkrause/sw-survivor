@@ -168,6 +168,7 @@ export class UpgradeSystem {
         //setup projectile config
         player.initProjectilePool();
         player.unlockBlasterUpgrade();
+        player.unlockProjectile("blaster")
       },
       isAvailable: () => true
     });
@@ -180,7 +181,7 @@ export class UpgradeSystem {
       level: 0,
       maxLevel: 5,
       apply: (player) => {
-        player.increaseProjectileDamage(.25);
+        player.increaseBlasterDamage(.75);
       },
       isAvailable: (player) => player.hasBlasterAbility() // ✅ Evaluated when needed
     });
@@ -334,7 +335,7 @@ export class UpgradeSystem {
 
       // Set random spin and scale
       sprite.setAngle(Phaser.Math.Between(0, 360)); // Random initial rotation
-      sprite.setScale(Phaser.Math.FloatBetween(0.5, 1)); // Random initial scale
+      sprite.setScale(Phaser.Math.FloatBetween(1, 2)); // Random initial scale
 
       // Animate the sprite falling
       const fallingTween = scene.tweens.add({

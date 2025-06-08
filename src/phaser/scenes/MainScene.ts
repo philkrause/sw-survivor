@@ -202,7 +202,7 @@ export default class MainScene extends Phaser.Scene {
     );
 
     // Set up projectile-enemy collisions for each projectile type
-    const projectileGroup = this.projectileSystem.getProjectileGroup(GAME_CONFIG.PROJECTILE.PLAYER.KEY);
+    const projectileGroup = this.projectileSystem.getProjectileGroup(GAME_CONFIG.BLASTER.PLAYER.KEY);
 
     if (projectileGroup) {
       this.physics.add.overlap(
@@ -310,7 +310,7 @@ export default class MainScene extends Phaser.Scene {
     // Pause the game
     this.pauseGame();
 
-    this.upgradeSystem.dropFallingSprites(this, "byoda", 500)
+    this.upgradeSystem.dropFallingSprites(this, "byoda", 300)
     
     // Show upgrade UI
     this.upgradeUI.show(3, (upgradeId: string) => {
