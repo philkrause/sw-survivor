@@ -233,6 +233,7 @@ export default class MainScene extends Phaser.Scene {
     const isCritical: boolean = p.getData('critical') ?? false;
     this.enemySystem.damageEnemy(e, damage, 0, isCritical);
     this.projectileSystem.deactivate(p);
+    console.log("Projectile hit enemy")
 
   }
 
@@ -368,6 +369,8 @@ export default class MainScene extends Phaser.Scene {
       }
     }
 
+
+
     // Skip update if game is paused
     if (this.isPaused) return;
 
@@ -379,9 +382,7 @@ export default class MainScene extends Phaser.Scene {
     this.background.tilePositionY = this.cameras.main.scrollY * parallaxFactor;
 
 
-
-
-    if (this.player.unlockedProjectiles.has("laser"))
+    if (this.player.hasBlasterAbility())
       this.projectileSystem.update(time);
 
     // Update enemy system

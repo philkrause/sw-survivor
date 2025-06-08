@@ -85,7 +85,7 @@ export const GAME_CONFIG = {
       DURATION: 600,
       SCALE: 3,
       DEPTH: 3,
-      BASEDAMAGE: 30,
+      BASEDAMAGE: 300,
       WIDTH: 50,
       HEIGHT: 50,
       TINT: 100,

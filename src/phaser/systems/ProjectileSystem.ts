@@ -141,7 +141,6 @@ export class ProjectileSystem {
   update(time: number): void {
     // Clear visible projectiles array
     this.visibleProjectiles.length = 0;
-
     // Get the camera's world bounds
     const cameraBounds = this.scene.cameras.main.worldView;
 
@@ -153,14 +152,13 @@ export class ProjectileSystem {
 
         // Skip inactive projectiles
         if (!projectile.active) continue;
-
+        
         if (
           projectile.x < cameraBounds.left || // Off-screen (left)
           projectile.x > cameraBounds.right || // Off-screen (right)
           projectile.y < cameraBounds.top || // Off-screen (top)
           projectile.y > cameraBounds.bottom // Off-screen (bottom)
         ) {
-          console.log("PROJECTILE OFF SCREEN")
           this.deactivate(projectile);
           continue;
         }
@@ -172,7 +170,9 @@ export class ProjectileSystem {
   }
 
   deactivate(projectile: Phaser.Physics.Arcade.Sprite): void {
+    
     if (!projectile.active) {
+      console.log("projectile off screen")
       // If the projectile is already inactive, skip deactivation
       console.warn(`Attempted to deactivate an already inactive projectile at (${projectile.x}, ${projectile.y})`);
       return;

@@ -328,7 +328,7 @@ export class UpgradeSystem {
         Phaser.Math.Between(cameraX, cameraX + cameraWidth), // Random X position within the camera's view
         Phaser.Math.Between(cameraY - cameraHeight, cameraY - 50), // Completely above the visible area
         spriteKey // Sprite texture key
-      ).setScale(2);
+      ).setScale(3);
 
       this.spriteGroup.add(sprite);
 
