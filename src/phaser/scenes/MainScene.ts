@@ -98,12 +98,19 @@ export default class MainScene extends Phaser.Scene {
     // ****** Instatiate SYSTEMS******   
 
     this.projectileSystem = new ProjectileSystem(this);
-    // Set up optimized collisions
-    //setup player
+
     this.player = new Player(this, centerX, centerY, this.projectileSystem);
+    
+    this.enemySystem = new EnemySystem(this, this.player.getSprite(), this.player);
+    
+    this.forceSystem = new ForceSystem(this, this.enemySystem, this.player);
+
+    this.R2D2System = new R2D2System(this, this.enemySystem, this.player);
+
+    this.saberSystem = new SaberSystem(this, this.enemySystem, this.player);
 
     this.collisionSystem = new CollisionSystem(this);
-    this.enemySystem = new EnemySystem(this, this.player.getSprite(), this.player);
+    
 
     this.events.on('projectile-pool-initialized', this.setupProjectileCollisions, this);
 
@@ -122,14 +129,6 @@ export default class MainScene extends Phaser.Scene {
     this.cameras.main.startFollow(this.player.getSprite(), true, 0.1, 0.1);
 
 
-    // Create upgrade systems
-
-
-    this.forceSystem = new ForceSystem(this, this.enemySystem, this.player);
-
-    this.R2D2System = new R2D2System(this, this.enemySystem, this.player);
-
-    this.saberSystem = new SaberSystem(this, this.enemySystem, this.player);
 
 
     //setup animations
@@ -233,8 +232,6 @@ export default class MainScene extends Phaser.Scene {
     const isCritical: boolean = p.getData('critical') ?? false;
     this.enemySystem.damageEnemy(e, damage, 0, isCritical);
     this.projectileSystem.deactivate(p);
-    console.log("Projectile hit enemy")
-
   }
 
 

@@ -57,7 +57,7 @@ export const GAME_CONFIG = {
       DAMAGE: 30,
       ROTATEWITHDIRECTION: true,
       MAXSIZE: 20,
-      MAX_COUNT: 10,
+      MAX_COUNT: 20,
       TINT: 0xffff, // cyan color
       DEPTH: 3,
     },
@@ -85,7 +85,7 @@ export const GAME_CONFIG = {
       DURATION: 600,
       SCALE: 3,
       DEPTH: 3,
-      BASEDAMAGE: 300,
+      BASEDAMAGE: 15,
       WIDTH: 50,
       HEIGHT: 50,
       TINT: 100,

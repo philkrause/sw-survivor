@@ -109,7 +109,7 @@ export class EnemySystem {
       const enemy = this.enemies.create(0, 0, 'enemy') as Phaser.Physics.Arcade.Sprite;
       enemy.setActive(false);
       enemy.setVisible(false);
-      enemy.disableBody(true,true);
+      enemy.disableBody(true, true);
       enemy.setAlpha(1);
 
       // Configure enemy properties once
@@ -217,7 +217,7 @@ export class EnemySystem {
     enemy.setPosition(x, y);
     enemy.setActive(true);
     enemy.setVisible(true);
-    if(enemy.body)
+    if (enemy.body)
       enemy.body.enable = true;// Activate the physics body
     //enemy.setVelocity(0, 0);
 
@@ -429,7 +429,7 @@ export class EnemySystem {
       fontFamily: 'Arial'
     };
 
-    if(!damage) return;
+    if (!damage) return;
     const text = scene.add.text(x, y, damage.toString(), style)
       .setDepth(100) // above other sprites
       .setOrigin(0.5);
@@ -479,11 +479,20 @@ export class EnemySystem {
       if (length > 0) {
         const knockbackX = -(vx / length) * knockbackForce;
         const knockbackY = -(vy / length) * knockbackForce;
-        enemy.setVelocity(knockbackX, knockbackY);
+        const duration = GAME_CONFIG.ENEMY.KNOCKBACK_DURATION;
 
-        this.scene.time.delayedCall(GAME_CONFIG.ENEMY.KNOCKBACK_DURATION, () => {
-          if (enemy.active) {
-            enemy.setVelocity(0, 0);
+        // Calculate target position
+        const targetX = enemy.x + knockbackX * (duration/1000); // scale by duration
+        const targetY = enemy.y + knockbackY * (duration/1000);
+
+        this.scene.tweens.add({
+          targets: enemy,
+          x: targetX,
+          y: targetY,
+          ease: 'Quad.easeOut',
+          duration: duration,
+          onComplete: () => {
+            // Optionally do something after knockback
           }
         });
       }

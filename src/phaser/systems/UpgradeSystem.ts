@@ -77,7 +77,7 @@ export class UpgradeSystem {
     this.availableUpgrades.push({
       id: 'unlock_force',
       name: 'Unlock The Force',
-      description: "Gain the ability to damage enemies around you.",
+      description: "Damage and push back enemies.",
       icon: 'force_unlock_icon',
       level: 0,
       maxLevel: 1,
@@ -329,19 +329,19 @@ export class UpgradeSystem {
         Phaser.Math.Between(cameraX, cameraX + cameraWidth), // Random X position within the camera's view
         Phaser.Math.Between(cameraY - cameraHeight, cameraY - 50), // Completely above the visible area
         spriteKey // Sprite texture key
-      ).setScale(3);
+      ).setScale(2);
 
       this.spriteGroup.add(sprite);
 
       // Set random spin and scale
       sprite.setAngle(Phaser.Math.Between(0, 360)); // Random initial rotation
-      sprite.setScale(Phaser.Math.FloatBetween(1, 2)); // Random initial scale
+      sprite.setScale(Phaser.Math.FloatBetween(.5, 1.5)); // Random initial scale
 
       // Animate the sprite falling
       const fallingTween = scene.tweens.add({
         targets: sprite,
         y: cameraY + cameraHeight,
-        angle: 360, // Spin 360 degrees
+        angle: 0, // Spin 360 degrees
         duration: Phaser.Math.Between(2000, 4000), // Random fall duration
         ease: 'Linear',
         loop: -1,

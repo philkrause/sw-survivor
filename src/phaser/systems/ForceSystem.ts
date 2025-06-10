@@ -69,7 +69,7 @@ export class ForceSystem {
         this.enemySystem.damageEnemy(
           enemy,
           this.forceConfig.baseDamage! * this.player.forceDamageMultiplier,
-          0,
+          20,
           false
         );
       }

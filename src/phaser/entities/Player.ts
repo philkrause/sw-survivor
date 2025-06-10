@@ -50,7 +50,7 @@ export class Player {
   private forceStrengthMultiplier: number = 1.0;
   public forceDamageMultiplier: number = 1.0;
 
-  private baseBlasterDamage: number = 15;
+  private baseBlasterDamage: number = GAME_CONFIG.BLASTER.PLAYER.DAMAGE;
   private damageBlasterMultiplier: number = 1.0;
   private baseAttackInterval: number = GAME_CONFIG.PLAYER.ATTACK_INTERVAL;
   private baseBlasterAttackInterval: number = 200;
@@ -123,6 +123,8 @@ export class Player {
     this.scene.events.emit('projectile-pool-initialized');
   }
 
+
+  // FIRE PROJECTILE LOGIC
   private fireProjectile(type: string): void {
     if (!this.projectileSystem || this.isLevelingUp) return;
 
@@ -172,7 +174,9 @@ export class Player {
 
       // Set damage and size for the projectile
       if (projectile) {
-        (projectile as any).damage = this.getBlasterDamage();
+        //(projectile as any).damage = this.getBlasterDamage();
+        projectile.setData('damage', this.getBlasterDamage());
+
         projectile.setScale(GAME_CONFIG.BLASTER.PLAYER.SCALE * this.projectileSizeMultiplier)
 
       }
@@ -620,7 +624,7 @@ export class Player {
     // Recreate the attack timer with the updated interval
     this.attackTimer = this.scene.time.addEvent({
       delay: this.getBlasterAttackInterval(),
-      callback: () => this.fireProjectile(GAME_CONFIG.PROJECTILE.PLAYER.KEY),
+      callback: () => this.fireProjectile(GAME_CONFIG.BLASTER.PLAYER.KEY),
       callbackScope: this,
       loop: true
     });
@@ -734,7 +738,6 @@ export class Player {
   }
 
   getBlasterDamage(): number {
-    console.log(`Blaster DAMAGE: ${this.baseBlasterDamage * (1*this.damageBlasterMultiplier)}`)
     return this.baseBlasterDamage * (1*this.damageBlasterMultiplier);
   }
 
