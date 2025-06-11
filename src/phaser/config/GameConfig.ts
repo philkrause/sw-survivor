@@ -9,7 +9,7 @@ export const GAME_CONFIG = {
     DEPTH: 10,
     HITBOX_SCALE: .7,
     ATTACK_INTERVAL: 1000, // ms between attacks
-    MAX_HEALTH: 1000, // Maximum player health
+    MAX_HEALTH: 10, // Maximum player health
     DAMAGE_INTERVAL: 500, // ms between damage ticks when overlapping enemies
     DAMAGE_AMOUNT: 5, // Amount of damage taken per tick
     DAMAGE_TINT: 0xff0000, // Red tint when damaged

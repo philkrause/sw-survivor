@@ -231,9 +231,12 @@ export class GameUI {
    * Add a temporary message to the screen
    */
   showMessage(message: string, duration: number = 2000): void {
+    
+    const cameraBounds = this.scene.cameras.main.worldView;
+    
     const text = this.scene.add.text(
-      this.scene.cameras.main.width / 2, 
-      this.scene.cameras.main.height / 2,
+      cameraBounds.centerX, 
+      cameraBounds.centerY,
       message,
       {
         ...GAME_CONFIG.UI.TEXT_STYLE,

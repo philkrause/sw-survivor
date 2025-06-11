@@ -22,6 +22,7 @@ export class Player {
   private sprite: Phaser.Physics.Arcade.Sprite;
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasdKeys!: GameKeys;
+  private dead: boolean = false;
   private scene: Phaser.Scene;
 
   // Blaster properties
@@ -253,7 +254,7 @@ export class Player {
     const down = this.wasdKeys.S.isDown || this.cursors.down!.isDown;
 
     // Check if A or left arrow key is pressed (move left)
-    if (left) {
+    if (left && !this.dead) {
       dirX = -1;
       this.sprite.setFlipX(true);  // Flip sprite to face left
       this.sprite.body?.setOffset(15, 10)
@@ -261,7 +262,7 @@ export class Player {
     }
 
     // Check if D or right arrow key is pressed (move right)
-    if (right) {
+    if (right && !this.dead) {
       this.sprite.body?.setOffset(10, 10)
       dirX = 1;
       this.sprite.setFlipX(false);  // Set sprite to face right (default)
@@ -269,12 +270,12 @@ export class Player {
     }
 
     // Handle vertical movement (up and down)
-    if (up) {
+    if (up && !this.dead) {
       dirY = -1;
       this.sprite.anims.play("player_walk_right", true);
     }
 
-    if (down) {
+    if (down && !this.dead) {
       dirY = 1;
       this.sprite.anims.play("player_walk_right", true);
     }
@@ -329,9 +330,10 @@ export class Player {
     this.setInvulnerable(GAME_CONFIG.PLAYER.INVULNERABLE_DURATION);
 
     // Check if player is defeated
-    if (this.health <= 0) {
+    if (this.health <= 0 && this.dead === false) {
       // Handle player defeat
       this.onDefeat();
+      this.dead = true; // Set dead flag to prevent multiple defeats
       return true;
     }
 
@@ -376,22 +378,14 @@ export class Player {
     // Stop player movement
     this.sprite.setVelocity(0, 0);
 
-    // Visual effect for defeat
-    this.scene.tweens.add({
-      targets: this.sprite,
-      alpha: 0,
-      scale: 0,
-      duration: 1000,
-      ease: 'Power2',
-      onComplete: () => {
-        // Game over logic would go here
-        // For now, just show a message using the scene's showMessage method if available
-        const mainScene = this.scene.scene.get('MainScene');
-        if (mainScene && typeof (mainScene as any).gameUI?.showMessage === 'function') {
-          (mainScene as any).gameUI.showMessage('Game Over!', 5000);
-        }
-      }
-    });
+    //death animation
+    this.deathVisual();
+
+    const mainScene = this.scene.scene.get('MainScene');
+    this.sprite.setActive(false).setVisible(false);
+    if (mainScene && typeof (mainScene as any).gameUI?.showMessage === 'function') {
+      (mainScene as any).gameUI.showMessage('Game Over!', 5000);
+    }
   }
 
   /**
@@ -738,7 +732,7 @@ export class Player {
   }
 
   getBlasterDamage(): number {
-    return this.baseBlasterDamage * (1*this.damageBlasterMultiplier);
+    return this.baseBlasterDamage * (1 * this.damageBlasterMultiplier);
   }
 
   increaseBlasterDamage(multiplier: number): void {
@@ -794,6 +788,52 @@ export class Player {
   increaseSaberSpeed(multiplier: number): void {
     this.saberSpeedMultiplier *= multiplier;
     console.log("Increased saber speed: " + this.saberSpeedMultiplier); // Add debug here
+  }
+
+  deathVisual(): void {
+    const scene = this.scene;
+
+    // Create a graphics object to generate a cyan circle texture
+    const graphics = scene.make.graphics({ x: 0, y: 0 });
+    graphics.fillStyle(0x00ffff); // Cyan
+    graphics.fillCircle(8, 8, 8); // Circle radius 8
+    graphics.generateTexture('cyan_circle', 16, 16);
+    graphics.destroy();
+
+    // Number of particles
+    const numParticles = 20;
+
+    for (let i = 0; i < numParticles; i++) {
+      // Create a sprite at player's position
+      if(this.sprite.body) {
+        const particle = scene.physics.add.image(this.sprite.body.x, this.sprite.body.y, 'cyan_circle');
+        
+        // Scale it if needed
+        particle.setScale(2);
+
+        // Random velocity in all directions
+        const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+        const speed = Phaser.Math.Between(500, 1000);
+        const vx = Math.cos(angle) * speed;
+        const vy = Math.sin(angle) * speed;
+
+        particle.setVelocity(vx, vy);
+
+        // Optional: Fade and destroy after time
+        scene.tweens.add({
+          targets: particle,
+          alpha: 0,
+          scale: 0,
+          duration: 900,
+          repeat: false,
+          onComplete: () => {
+            particle.destroy();
+            this.scene.physics.pause();
+            this.scene.time.paused = true; // Pause the game
+          }
+        });
+      }
+    }
   }
 
 

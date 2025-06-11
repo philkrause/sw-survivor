@@ -1,6 +1,5 @@
 import Phaser from 'phaser';
 import { Player } from '../entities/Player';
-import { ProjectileSystem } from './ProjectileSystem';
 
 /**
  * Represents an upgrade that can be chosen by the player
@@ -99,19 +98,19 @@ export class UpgradeSystem {
     //   isAvailable: (player) => player.hasForceAbility() // ✅ Evaluated when needed
     // });
 
-    // this.availableUpgrades.push({
-    //   id: 'force_damage',
-    //   name: 'Increase Force Damage',
-    //   description: "Increase Force Damage by 15%",
-    //   icon: 'speed_icon',
-    //   level: 0,
-    //   maxLevel: 5,
-    //   apply: (player) => {
-    //     console.log("The increase force damage function was called")
-    //     player.increaseForceDamage(0.25);  // Activate the force and set strength
-    //   },
-    //   isAvailable: (player) => player.hasForceAbility() // ✅ Evaluated when needed
-    // });
+    this.availableUpgrades.push({
+      id: 'force_damage',
+      name: 'Increase Force Damage',
+      description: "Increase Force Damage by 15%",
+      icon: 'speed_icon',
+      level: 0,
+      maxLevel: 5,
+      apply: (player) => {
+        console.log("The increase force damage function was called")
+        player.increaseForceDamage(0.25);  // Activate the force and set strength
+      },
+      isAvailable: (player) => player.hasForceAbility() // ✅ Evaluated when needed
+    });
 
     // this.availableUpgrades.push({
     //   id: 'force_radius',
