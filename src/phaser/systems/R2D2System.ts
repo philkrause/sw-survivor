@@ -45,7 +45,7 @@ export class R2D2System {
     }
 
 
-    update(time: number, delta: number): void {
+    update(delta: number): void {
         if (!this.active || !this.sprite || !this.player) return;
 
         // 1. Store previous angle and advance current angle

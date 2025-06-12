@@ -380,7 +380,7 @@ export default class MainScene extends Phaser.Scene {
 
 
     if (this.player.hasBlasterAbility())
-      this.projectileSystem.update(time);
+      this.projectileSystem.update();
 
     // Update enemy system
     this.enemySystem.update(time, _delta);
@@ -394,7 +394,7 @@ export default class MainScene extends Phaser.Scene {
         this.R2D2System.unlockAndActivate();
       }
 
-      this.R2D2System.update(time, _delta);
+      this.R2D2System.update(_delta);
     }
 
 

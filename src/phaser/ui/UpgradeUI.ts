@@ -113,19 +113,19 @@ export class UpgradeUI {
     this.upgradeCards = [];
   }
 
-  private createOverlay(): void {
-    const cam = this.scene.cameras.main;
-    this.overlay = this.scene.add.rectangle(
-      cam.scrollX + cam.width / 2,
-      cam.scrollY + cam.height / 2,
-      cam.width,
-      cam.height,
-      0x000000,
-      0 // Start transparent
-    ).setScrollFactor(0);
+  // private createOverlay(): void {
+  //   const cam = this.scene.cameras.main;
+  //   this.overlay = this.scene.add.rectangle(
+  //     cam.scrollX + cam.width / 2,
+  //     cam.scrollY + cam.height / 2,
+  //     cam.width,
+  //     cam.height,
+  //     0x000000,
+  //     0 // Start transparent
+  //   ).setScrollFactor(0);
   
-    this.container.add(this.overlay);
-  }
+  //   this.container.add(this.overlay);
+  // }
 
   /**
    * Create upgrade cards for the given upgrades

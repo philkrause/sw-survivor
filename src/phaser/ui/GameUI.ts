@@ -33,19 +33,19 @@ export class GameUI {
   /**
    * Create instruction text for the player
    */
-  private createInstructionText(): void {
-    // Movement instructions
-    this.scene.add.text(16, 16, 'Use WASD or Arrow keys to move', GAME_CONFIG.UI.TEXT_STYLE);
+  // private createInstructionText(): void {
+  //   // Movement instructions
+  //   this.scene.add.text(16, 16, 'Use WASD or Arrow keys to move', GAME_CONFIG.UI.TEXT_STYLE);
     
-    // Enemy info
-    this.scene.add.text(16, 40, 'Enemies will spawn around the edges', GAME_CONFIG.UI.TEXT_STYLE);
+  //   // Enemy info
+  //   this.scene.add.text(16, 40, 'Enemies will spawn around the edges', GAME_CONFIG.UI.TEXT_STYLE);
     
-    // Health info
-    this.scene.add.text(16, 64, 'Avoid enemies to prevent taking damage', GAME_CONFIG.UI.TEXT_STYLE);
+  //   // Health info
+  //   this.scene.add.text(16, 64, 'Avoid enemies to prevent taking damage', GAME_CONFIG.UI.TEXT_STYLE);
     
-    // Experience info
-    this.scene.add.text(16, 88, 'Collect cyan orbs for experience', GAME_CONFIG.UI.TEXT_STYLE);
-  }
+  //   // Experience info
+  //   this.scene.add.text(16, 88, 'Collect cyan orbs for experience', GAME_CONFIG.UI.TEXT_STYLE);
+  // }
   
   /**
    * Create a text display for the enemy counter

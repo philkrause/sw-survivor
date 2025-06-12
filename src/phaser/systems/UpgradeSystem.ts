@@ -19,7 +19,6 @@ export interface Upgrade {
  * System responsible for managing available upgrades and their effects
  */
 export class UpgradeSystem {
-  private scene: Phaser.Scene;
   private player: Player;
   private availableUpgrades: Upgrade[] = [];
   private acquiredUpgrades: Map<string, number> = new Map();
@@ -28,7 +27,6 @@ export class UpgradeSystem {
   
   // Group to hold falling sprites
   constructor(scene: Phaser.Scene, player: Player) {
-    this.scene = scene;
     this.player = player;
     this.spriteGroup = scene.add.group(); // Initialize the group
 

@@ -203,7 +203,6 @@ export class ExperienceSystem {
         continue;
       }
 
-      orb.setColor
 
       // Check if orb is on screen
       // if (!Phaser.Geom.Rectangle.Contains(this.cameraRect, orb.x, orb.y)) {

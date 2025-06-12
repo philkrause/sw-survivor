@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config/GameConfig';
 import { normalizeVector } from '../utils/MathUtils';
 import { ProjectileSystem } from '../systems/ProjectileSystem'; // adjust path
-import { CollisionSystem } from '../systems/CollisionSystem';
+//import { CollisionSystem } from '../systems/CollisionSystem';
 
 
 /**
@@ -28,7 +28,6 @@ export class Player {
   // Blaster properties
   private attackTimer: Phaser.Time.TimerEvent | null = null;
   private projectileSystem: ProjectileSystem | null = null;
-  private collisionSystem: CollisionSystem | null = null; // Add collision system for player
   private isFlippedX: boolean = false; // Track if player is flipped horizontally
   public unlockedProjectiles: Set<string> = new Set(); // Track unlocked projectiles
 
@@ -86,7 +85,7 @@ export class Player {
     this.maxHealth = GAME_CONFIG.PLAYER.MAX_HEALTH;
     this.health = this.maxHealth;
     this.projectileSystem = projectileSystem
-    this.collisionSystem = new CollisionSystem(this.scene);
+    //this.collisionSystem = new CollisionSystem(this.scene);
 
     // Listen for experience collection events
     this.scene.events.on('experience-collected', this.onExperienceCollected, this);

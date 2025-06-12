@@ -73,21 +73,21 @@ export class ProjectileSystem {
     this.pools.set(config.key, group);
   }
 
-  private configureProjectile(
-    projectile: Phaser.Physics.Arcade.Sprite,
-    config: ProjectileConfig
-  ): void {
-    projectile.setScale(config.scale);
-    projectile.setDepth(config.depth);
+  // private configureProjectile(
+  //   projectile: Phaser.Physics.Arcade.Sprite,
+  //   config: ProjectileConfig
+  // ): void {
+  //   projectile.setScale(config.scale);
+  //   projectile.setDepth(config.depth);
 
-    if (config.tint !== undefined) {
-      projectile.setTint(config.tint);
-    }
+  //   if (config.tint !== undefined) {
+  //     projectile.setTint(config.tint);
+  //   }
 
-    // Store the projectile type on the instance for later reference
-    (projectile as any).projectileType = config.key;
-    (projectile as any).rotateToDirection = config.rotateToDirection || false;
-  }
+  //   // Store the projectile type on the instance for later reference
+  //   (projectile as any).projectileType = config.key;
+  //   (projectile as any).rotateToDirection = config.rotateToDirection || false;
+  // }
 
 
   fire(
@@ -138,7 +138,7 @@ export class ProjectileSystem {
     return projectile;
   }
 
-  update(time: number): void {
+  update(): void {
     // Clear visible projectiles array
     this.visibleProjectiles.length = 0;
     // Get the camera's world bounds
