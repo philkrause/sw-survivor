@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => ({
   plugins: [react()],
-  base: mode === 'production' ? '/sw-survivor/' : '/', // ✅ important
+  base: mode === 'production' ? '/' : '/', // ✅ important
   server: {
     host: '127.0.0.1',
     port: 3000,
