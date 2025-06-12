@@ -43,32 +43,32 @@ export class UpgradeSystem {
   private initializeUpgrades(): void {
 
     // SABER UPGRADES
-    // this.availableUpgrades.push({
-    //   id: 'saber_speed',
-    //   name: 'Increase Saber Speed',
-    //   description: "Increase Saber Interval by 10%",
-    //   icon: 'saber_icon',
-    //   level: 0,
-    //   maxLevel: 5,
-    //   apply: (player) => {
-    //     player.increaseSaberSpeed(0.5);
-    //   },
-    //   isAvailable: () => true
-    // });
+    this.availableUpgrades.push({
+      id: 'saber_speed',
+      name: 'Increase Saber Speed',
+      description: "Increase Saber Interval by 10%",
+      icon: 'saber_icon',
+      level: 0,
+      maxLevel: 5,
+      apply: (player) => {
+        player.increaseSaberSpeed(0.5);
+      },
+      isAvailable: () => true
+    });
 
-    // this.availableUpgrades.push({
-    //   id: 'saber_damage',
-    //   name: 'Increase Saber Damage',
-    //   description: "Increase Saber Damage by 15%",
-    //   icon: 'saber_icon',
-    //   level: 0,
-    //   maxLevel: 5,
-    //   apply: (player) => {
-    //     console.log("The increase saber damage function was called")
-    //     player.increaseSaberDamage(0.25);  // Activate the saber and set strength
-    //   },
-    //   isAvailable: () => true // ✅ Evaluated when needed
-    // });
+    this.availableUpgrades.push({
+      id: 'saber_damage',
+      name: 'Increase Saber Damage',
+      description: "Increase Saber Damage by 15%",
+      icon: 'saber_icon',
+      level: 0,
+      maxLevel: 5,
+      apply: (player) => {
+        console.log("The increase saber damage function was called")
+        player.increaseSaberDamage(0.25);  // Activate the saber and set strength
+      },
+      isAvailable: () => true // ✅ Evaluated when needed
+    });
 
     // ** THE FORCE **
     this.availableUpgrades.push({
@@ -83,18 +83,18 @@ export class UpgradeSystem {
       }
     });
     // // Add attack speed upgrade
-    // this.availableUpgrades.push({
-    //   id: 'force_speed',
-    //   name: 'Increase Force Speed',
-    //   description: "Increase Force Interval by 10%",
-    //   icon: 'speed_icon',
-    //   level: 0,
-    //   maxLevel: 5,
-    //   apply: (player) => {
-    //     player.increaseForceSpeed(0.9);  // Activate the force and set strength
-    //   },
-    //   isAvailable: (player) => player.hasForceAbility() // ✅ Evaluated when needed
-    // });
+    this.availableUpgrades.push({
+      id: 'force_speed',
+      name: 'Increase Force Speed',
+      description: "Increase Force Interval by 10%",
+      icon: 'speed_icon',
+      level: 0,
+      maxLevel: 5,
+      apply: (player) => {
+        player.increaseForceSpeed(0.9);  // Activate the force and set strength
+      },
+      isAvailable: (player) => player.hasForceAbility() // ✅ Evaluated when needed
+    });
 
     this.availableUpgrades.push({
       id: 'force_damage',
@@ -110,19 +110,19 @@ export class UpgradeSystem {
       isAvailable: (player) => player.hasForceAbility() // ✅ Evaluated when needed
     });
 
-    // this.availableUpgrades.push({
-    //   id: 'force_radius',
-    //   name: 'Increase Force Radius',
-    //   description: "Increase Force Radius by 15%",
-    //   icon: 'speed_icon',
-    //   level: 0,
-    //   maxLevel: 5,
-    //   apply: (player) => {
-    //     console.log("The increase force radius function was called")
-    //     player.increaseForceDamage(0.25);  // Activate the force and set strength
-    //   },
-    //   isAvailable: (player) => player.hasForceAbility() // ✅ Evaluated when needed
-    // });
+    this.availableUpgrades.push({
+      id: 'force_radius',
+      name: 'Increase Force Radius',
+      description: "Increase Force Radius by 15%",
+      icon: 'speed_icon',
+      level: 0,
+      maxLevel: 5,
+      apply: (player) => {
+        console.log("The increase force radius function was called")
+        player.increaseForceDamage(0.25);  // Activate the force and set strength
+      },
+      isAvailable: (player) => player.hasForceAbility() // ✅ Evaluated when needed
+    });
 
     // // ** R2D2 **
     this.availableUpgrades.push({
@@ -213,32 +213,32 @@ export class UpgradeSystem {
     });
 
     // Add health upgrade
-    // this.availableUpgrades.push({
-    //   id: 'max_health',
-    //   name: 'Max Health',
-    //   description: 'Increase maximum health by 20',
-    //   icon: 'health_icon',
-    //   level: 0,
-    //   maxLevel: 5,
-    //   apply: (player) => {
-    //     player.increaseMaxHealth(20);
-    //   },
-    //   isAvailable: () => true // ✅ Evaluated when needed
-    // });
+    this.availableUpgrades.push({
+      id: 'max_health',
+      name: 'Max Health',
+      description: 'Increase maximum health by 20',
+      icon: 'health_icon',
+      level: 0,
+      maxLevel: 5,
+      apply: (player) => {
+        player.increaseMaxHealth(20);
+      },
+      isAvailable: () => true // ✅ Evaluated when needed
+    });
 
     // //Add movement speed upgrade
-    // this.availableUpgrades.push({
-    //   id: 'movement_speed',
-    //   name: 'Movement Speed',
-    //   description: 'Increase movement speed by 10%',
-    //   icon: 'movement_icon',
-    //   level: 0,
-    //   maxLevel: 3,
-    //   apply: (player) => {
-    //     player.increaseMovementSpeed(0.1);
-    //   },
-    //   isAvailable: () => true // ✅ Evaluated when needed
-    // });
+    this.availableUpgrades.push({
+      id: 'movement_speed',
+      name: 'Movement Speed',
+      description: 'Increase movement speed by 10%',
+      icon: 'movement_icon',
+      level: 0,
+      maxLevel: 3,
+      apply: (player) => {
+        player.increaseMovementSpeed(0.1);
+      },
+      isAvailable: () => true // ✅ Evaluated when needed
+    });
   }
 
   /**
