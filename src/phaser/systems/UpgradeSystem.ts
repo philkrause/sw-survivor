@@ -140,18 +140,18 @@ export class UpgradeSystem {
       isAvailable: () => true,
     });
 
-    // this.availableUpgrades.push({
-    //   id: 'r2d2_damage',
-    //   name: 'Increase R2-D2 Damage',
-    //   description: "Increase R2-D2 damage.",
-    //   icon: 'r2d2_icon',
-    //   level: 0,
-    //   maxLevel: 5,
-    //   apply: (player) => {
-    //     player.increaseR2D2Damage(2);
-    //   },
-    //   isAvailable: (player) => player.hasR2D2Ability()
-    // });
+    this.availableUpgrades.push({
+      id: 'r2d2_damage',
+      name: 'Increase R2-D2 Damage',
+      description: "Increase R2-D2 damage.",
+      icon: 'r2d2_icon',
+      level: 0,
+      maxLevel: 5,
+      apply: (player) => {
+        player.increaseR2D2Damage(2);
+      },
+      isAvailable: (player) => player.hasR2D2Ability()
+    });
 
 
 

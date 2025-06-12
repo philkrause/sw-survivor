@@ -163,7 +163,7 @@ export default class MainScene extends Phaser.Scene {
 
 
     // Create game UI
-    this.gameUI = new GameUI(this);
+    this.gameUI = new GameUI(this, this.player);
 
     // Create upgrade UI
     this.upgradeUI = new UpgradeUI(this, this.upgradeSystem);

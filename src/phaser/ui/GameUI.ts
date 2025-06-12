@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config/GameConfig';
+import { Player } from '../entities/Player';
+
 
 /**
  * Manages all UI elements in the game
@@ -8,13 +10,14 @@ export class GameUI {
   private scene: Phaser.Scene;
   //private enemyCountText: Phaser.GameObjects.Text;
   //private healthText: Phaser.GameObjects.Text;
- // private levelText: Phaser.GameObjects.Text;
+  //private levelText: Phaser.GameObjects.Text;
   private experienceBar: Phaser.GameObjects.Graphics;
   private healthBar: Phaser.GameObjects.Graphics;
-  
-  constructor(scene: Phaser.Scene) {
+  private player: Player;
+
+  constructor(scene: Phaser.Scene, player: Player) {
     this.scene = scene;
-    
+    this.player = player;
     // Create UI elements
     //this.createInstructionText();
     //this.enemyCountText = this.createEnemyCounterText();
@@ -105,7 +108,10 @@ export class GameUI {
    */
   private updateHealthBar(current: number, max: number): void {
     const healthBar = this.healthBar;
-    
+    const cameraBounds = this.scene.cameras.main
+
+    let x = cameraBounds.scrollX - 40;
+    let y = cameraBounds.scrollY - 30;
     // Clear previous graphics
     healthBar.clear();
     
@@ -115,11 +121,20 @@ export class GameUI {
     // Get dimensions
     const width = GAME_CONFIG.PLAYER.HEALTH_BAR_WIDTH;
     const height = GAME_CONFIG.PLAYER.HEALTH_BAR_HEIGHT;
+
+    // Camera
+
+    // Position at bottom of players position
+    const playerPos =  this.player.getPosition();
     
-    // Position at bottom-center of screen
-    const x = (this.scene.cameras.main.width - width) / 2;
-    const y = this.scene.cameras.main.height - height - 40; // 40px from bottom
-    
+
+    // x = playerPos.x - cameraBounds.scrollX - 40; // Centered horizontally
+    // y = playerPos.y  - cameraBounds.scrollY + 40; 
+
+    const offsetX = this.player.getFlippedX() ? -10 : -40;
+    x = playerPos.x - cameraBounds.scrollX + offsetX;
+    y = playerPos.y - cameraBounds.scrollY + 40;
+
     // Draw background (empty health)
     healthBar.fillStyle(0x222222, 0.8);
     healthBar.fillRect(x, y, width, height);
@@ -143,7 +158,7 @@ export class GameUI {
     healthBar.strokeRect(x, y, width, height);
     
     // Add text
-    const healthText = `${current}/${max}`;
+    //const healthText = `${current}/${max}`;
     
     // Remove any existing text
     const existingText = this.scene.children.getByName('health-text');
@@ -152,11 +167,11 @@ export class GameUI {
     }
     
     // Add new text
-    this.scene.add.text(x + width / 2, y + height / 2, healthText, {
-      fontSize: '12px',
-      color: '#ffffff',
-      fontStyle: 'bold'
-    }).setOrigin(0.5).setName('health-text').setScrollFactor(0).setDepth(1000);
+    // this.scene.add.text(x + width / 2, y + height / 2, healthText, {
+    //   fontSize: '12px',
+    //   color: '#ffffff',
+    //   fontStyle: 'bold'
+    // }).setOrigin(0.5).setName('health-text').setScrollFactor(0).setDepth(1000);
   }
   
   /**

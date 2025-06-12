@@ -24,12 +24,12 @@ export class Player {
   private wasdKeys!: GameKeys;
   private dead: boolean = false;
   private scene: Phaser.Scene;
-
+  
   // Blaster properties
   private attackTimer: Phaser.Time.TimerEvent | null = null;
   private projectileSystem: ProjectileSystem | null = null;
   private collisionSystem: CollisionSystem | null = null; // Add collision system for player
-
+  private isFlippedX: boolean = false; // Track if player is flipped horizontally
   public unlockedProjectiles: Set<string> = new Set(); // Track unlocked projectiles
 
   // Upgrade properties
@@ -241,6 +241,7 @@ export class Player {
     };
   }
 
+
   /**
    * Gets the input direction based on keyboard state
    */
@@ -259,6 +260,7 @@ export class Player {
       this.sprite.setFlipX(true);  // Flip sprite to face left
       this.sprite.body?.setOffset(15, 10)
       this.sprite.anims.play("player_walk_right", true);
+      this.isFlippedX = true; // Set flipped state
     }
 
     // Check if D or right arrow key is pressed (move right)
@@ -267,6 +269,7 @@ export class Player {
       dirX = 1;
       this.sprite.setFlipX(false);  // Set sprite to face right (default)
       this.sprite.anims.play("player_walk_right", true);
+      this.isFlippedX = false; // Reset flipped state
     }
 
     // Handle vertical movement (up and down)
@@ -284,7 +287,9 @@ export class Player {
     return { x: dirX, y: dirY };
   }
 
-
+  getFlippedX(): boolean {
+    return this.isFlippedX;
+  }
 
   /**
    * Get the player sprite instance
@@ -624,6 +629,8 @@ export class Player {
     });
 
   }
+
+
   //************** */ UPGRADES ****************
 
 

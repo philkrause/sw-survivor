@@ -9,13 +9,13 @@ export const GAME_CONFIG = {
     DEPTH: 10,
     HITBOX_SCALE: .7,
     ATTACK_INTERVAL: 1000, // ms between attacks
-    MAX_HEALTH: 10, // Maximum player health
+    MAX_HEALTH: 100, // Maximum player health
     DAMAGE_INTERVAL: 500, // ms between damage ticks when overlapping enemies
     DAMAGE_AMOUNT: 5, // Amount of damage taken per tick
     DAMAGE_TINT: 0xff0000, // Red tint when damaged
     INVULNERABLE_DURATION: 10, // ms of invulnerability after taking damage
-    HEALTH_BAR_WIDTH: 200, // Width of health bar in pixels
-    HEALTH_BAR_HEIGHT: 20, // Height of health bar in pixels
+    HEALTH_BAR_WIDTH: 50, // Width of health bar in pixels
+    HEALTH_BAR_HEIGHT: 10, // Height of health bar in pixels
     EXPERIENCE: {
       PICKUP_RADIUS: 100, // Radius in pixels for auto-pickup
       MAGNET_RADIUS: 100, // Radius in pixels for experience magnet effect
