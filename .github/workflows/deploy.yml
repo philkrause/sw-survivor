@@ -41,7 +41,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./dist  # ✅ must point to full dist folder
+          path: ./dist
 
   deploy:
     environment:

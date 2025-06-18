@@ -358,6 +358,10 @@ export default class MainScene extends Phaser.Scene {
    */
   update(time: number, _delta: number): void {
 
+    if(this.player.isDead()) {
+      return;
+    }
+
     if (Phaser.Input.Keyboard.JustDown(this.escapeKey)) {
       if (this.isPaused) {
         this.resumeGame();

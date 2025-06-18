@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => ({
   plugins: [react()],
-  base: mode === 'production' ? '/' : '/', // ✅ important
+  base: mode === 'production' ? '/' : '/',
   server: {
     host: '127.0.0.1',
     port: 3000,

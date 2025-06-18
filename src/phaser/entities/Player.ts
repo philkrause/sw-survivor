@@ -388,7 +388,7 @@ export class Player {
     const mainScene = this.scene.scene.get('MainScene');
     this.sprite.setActive(false).setVisible(false);
     if (mainScene && typeof (mainScene as any).gameUI?.showMessage === 'function') {
-      (mainScene as any).gameUI.showMessage('Game Over!', 5000);
+      (mainScene as any).gameUI.showMessage('Game Over!', 0, "#ff0000", "48px");
     }
   }
 
@@ -446,6 +446,10 @@ export class Player {
    */
   getMaxHealth(): number {
     return this.maxHealth;
+  }
+
+  isDead(): boolean {
+    return this.dead;
   }
 
   /**

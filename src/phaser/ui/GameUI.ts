@@ -239,14 +239,19 @@ export class GameUI {
     //this.updateLevel(level);
     
     // Show level up message
-    this.showMessage(`Level Up! ${level}`, 2000);
+    this.showMessage(`Level Up! ${level}`, 2000, "0x00ff00", "32px");
   }
   
   /**
    * Add a temporary message to the screen
    */
-  showMessage(message: string, duration: number = 2000): void {
-    
+  showMessage(
+    message: string, 
+    duration: number = 2000, 
+    color: string = "0x00ffff", 
+    size: string = "32px", 
+  ): void {
+
     const cameraBounds = this.scene.cameras.main.worldView;
     
     const text = this.scene.add.text(
@@ -255,20 +260,22 @@ export class GameUI {
       message,
       {
         ...GAME_CONFIG.UI.TEXT_STYLE,
-        fontSize: '24px'
+        fontSize: size
       }
-    ).setOrigin(0.5);
+    ).setOrigin(0.5).setAlpha(1).setColor(color).setDepth(1000);
     
     // Fade out and destroy after duration
-    this.scene.tweens.add({
-      targets: text,
-      alpha: 0,
-      duration: duration,
-      ease: 'Power2',
-      onComplete: () => {
-        text.destroy();
-      }
-    });
+    if(duration > 0) {
+      this.scene.tweens.add({
+        targets: text,
+        alpha: 0,
+        duration: duration,
+        ease: 'Power2',
+        onComplete: () => {
+          text.destroy();
+        }
+      });
+    }
   }
   
   /**
