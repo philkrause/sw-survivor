@@ -25,7 +25,6 @@ export default class MainScene extends Phaser.Scene {
   private assetManager!: AssetManager;
   private player!: Player;
   private enemySystem!: EnemySystem;
-  private collisionSystem!: CollisionSystem;
   private projectileSystem!: ProjectileSystem;
   private tfighterSystem!: TfighterSystem;
   private forceSystem!: ForceSystem;
@@ -40,7 +39,6 @@ export default class MainScene extends Phaser.Scene {
   private background!: Phaser.GameObjects.TileSprite;
   // Game state
   private isPaused: boolean = false;
-  private blueparticle!: Phaser.GameObjects.Particles.ParticleEmitter;
 
   // Performance tracking
   private perfText!: Phaser.GameObjects.Text;
@@ -113,8 +111,6 @@ export default class MainScene extends Phaser.Scene {
     this.R2D2System = new R2D2System(this, this.enemySystem, this.tfighterSystem, this.player);
 
     this.saberSystem = new SaberSystem(this, this.enemySystem, this.tfighterSystem, this.player );
-
-    this.collisionSystem = new CollisionSystem(this);
     
     //this.setupProjectileCollisions();
 
@@ -156,9 +152,6 @@ export default class MainScene extends Phaser.Scene {
 
     // Create upgrade system
     this.upgradeSystem = new UpgradeSystem(this, this.player);
-
-    // Set up optimized collisions
-    this.collisionSystem = new CollisionSystem(this);
 
 
     // Create game UI

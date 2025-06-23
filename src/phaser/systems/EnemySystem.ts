@@ -15,8 +15,6 @@ export class EnemySystem {
   private player: Player;
   private experienceSystem: ExperienceSystem | null = null;
   private enemyTypes = ['storm', 'soldier1', 'dune'];
-  private hasEnteredScreenMap = new Map<Phaser.GameObjects.Sprite, boolean>();
-  private previousVisibility = new WeakMap<Phaser.GameObjects.Sprite, boolean>();
 
   // Tracking active enemies for improved performance
   private activeEnemies: Set<Phaser.Physics.Arcade.Sprite> = new Set();
@@ -214,10 +212,10 @@ export class EnemySystem {
     //if (this.player.getLevel() > 2)
     type = Phaser.Utils.Array.GetRandom(this.enemyTypes);
 
-    const spawnZones = this.createSpawnZones()
+    this.spawnZones = this.createSpawnZones()
 
     // Pick a random spawn position
-    const { x, y } = Phaser.Utils.Array.GetRandom(spawnZones);
+    const { x, y } = Phaser.Utils.Array.GetRandom(this.spawnZones);
 
     // Get an inactive enemy from the pool
     const enemy = this.enemies.get(x, y, type) as Phaser.Physics.Arcade.Sprite;
@@ -343,7 +341,7 @@ export class EnemySystem {
     // Process active enemies
     for (const enemy of this.activeEnemies) {
       
-      const type = (enemy as any).enemyType;
+      //const type = (enemy as any).enemyType;
       
       // Only process on-screen enemies or those close to screen
       if (Phaser.Geom.Rectangle.Contains(this.cameraRect, enemy.x, enemy.y)) {

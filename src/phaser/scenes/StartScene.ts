@@ -23,7 +23,7 @@ export default class StartScene extends Phaser.Scene {
     document.fonts.load('64px StarJedi').then(() => {
       console.log('✅ StarJedi font ready');
 
-      const title = this.add.text(this.scale.width / 2, 300, 'star wars survivor', {
+      this.add.text(this.scale.width / 2, 300, 'star wars survivor', {
         fontFamily: 'StarJedi',
         fontSize: '64px',
         color: '#ffff00',
