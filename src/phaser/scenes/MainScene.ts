@@ -5,7 +5,6 @@ import { GameUI } from '../ui/GameUI';
 import { AssetManager } from '../systems/AssetManager';
 import { ProjectileSystem } from '../systems/ProjectileSystem';
 import { SaberSystem } from '../systems/SaberSystem';
-import { CollisionSystem } from '../systems/CollisionSystem';
 import { ForceSystem } from '../systems/ForceSystem';
 import { TfighterSystem } from '../systems/TfighterSystem';
 

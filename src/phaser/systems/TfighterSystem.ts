@@ -15,8 +15,6 @@ export class TfighterSystem {
   private player: Player;
   private experienceSystem: ExperienceSystem | null = null;
   private enemyTypes = ['tfighter'];
-  private hasEnteredScreenMap = new Map<Phaser.GameObjects.Sprite, boolean>();
-  private previousVisibility = new WeakMap<Phaser.GameObjects.Sprite, boolean>();
 
   // Tracking active enemies for improved performance
   private activeEnemies: Set<Phaser.Physics.Arcade.Sprite> = new Set();
@@ -92,8 +90,8 @@ export class TfighterSystem {
    * Prepopulate the enemy pool to avoid runtime allocations
    */
   private prepopulateEnemyPool(): void {
-    const spawnZones = this.createSpawnZones();
-    const spawnCenter = Phaser.Utils.Array.GetRandom(spawnZones);
+    this.spawnZones = this.createSpawnZones();
+    const spawnCenter = Phaser.Utils.Array.GetRandom(this.spawnZones);
     // Preallocate enemy objects to avoid allocations during gameplay
     for (let i = 0; i < GAME_CONFIG.TFIGHTER.MAX_COUNT; i++) {
 
@@ -312,7 +310,7 @@ export class TfighterSystem {
     // Process active enemies
     for (const enemy of this.activeEnemies) {
       
-      const type = (enemy as any).enemyType;
+      //const type = (enemy as any).enemyType;
       
       // Only process on-screen enemies or those close to screen
       if (Phaser.Geom.Rectangle.Contains(this.cameraRect, enemy.x, enemy.y)) {
