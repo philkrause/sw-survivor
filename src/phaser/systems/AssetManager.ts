@@ -43,6 +43,9 @@ export class AssetManager {
 
     this.scene.load.image('bb88', 'assets/images/game/bb88.png');
 
+    this.scene.load.image('tfighter', 'assets/images/game/tfighter_resize.png');
+
+    this.scene.load.image('blue_particle', 'assets/images/game/blue.png');
 
     // ************* EXTRAS **************
     this.scene.load.image('byoda', 'assets/images/game/babyyoda.png');
@@ -58,13 +61,16 @@ export class AssetManager {
       frameHeight: 25
     });
 
+    this.scene.load.image('dune', 'assets/images/game/dune.png');
+
+
     this.scene.load.image('enemy', 'assets/images/game/enemy.png');
 
     // ****** ENVIRONMENT *******
 
     // Load world background
     this.scene.load.image('background', 'assets/images/game/desertlevel1.png');
-
+    
     // ****** PARTICLES *******
 
     this.scene.load.image('spark', 'assets/images/game/spark1.png');

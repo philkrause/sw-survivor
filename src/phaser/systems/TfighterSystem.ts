@@ -7,14 +7,14 @@ import { Player } from '../entities/Player';
 /**
  * System responsible for enemy spawning, movement, and management
  */
-export class EnemySystem {
+export class TfighterSystem {
   private scene: Phaser.Scene;
   private enemies: Phaser.Physics.Arcade.Group;
   private spawnTimer: Phaser.Time.TimerEvent;
   private target: Phaser.Physics.Arcade.Sprite;
   private player: Player;
   private experienceSystem: ExperienceSystem | null = null;
-  private enemyTypes = ['storm', 'soldier1', 'dune'];
+  private enemyTypes = ['tfighter'];
   private hasEnteredScreenMap = new Map<Phaser.GameObjects.Sprite, boolean>();
   private previousVisibility = new WeakMap<Phaser.GameObjects.Sprite, boolean>();
 
@@ -48,8 +48,6 @@ export class EnemySystem {
 
     // Set up spawn timer
     this.spawnTimer = this.startSpawnTimer();
-    //this.spawnTfighterFormation();
-    
   }
 
   /**
@@ -57,8 +55,8 @@ export class EnemySystem {
  */
   getEnemiesNear(x: number, y: number, radius: number): Phaser.Physics.Arcade.Sprite[] {
     const result: Phaser.Physics.Arcade.Sprite[] = [];
-
     const radiusSq = radius * radius;
+
     for (const enemy of this.activeEnemies) {
       if (!enemy.active) continue;
 
@@ -76,48 +74,35 @@ export class EnemySystem {
   }
 
 
+
   /**
    * Create the enemy physics group with pooling
    */
   private createEnemyGroup(): Phaser.Physics.Arcade.Group {
     return this.scene.physics.add.group({
       classType: Phaser.Physics.Arcade.Sprite,
-      maxSize: GAME_CONFIG.ENEMY.MAX_COUNT,
+      maxSize: GAME_CONFIG.TFIGHTER.MAX_COUNT,
       runChildUpdate: false // We'll handle updates manually for better control
     });
   }
 
-  public static setupEnemyAnimations(scene: Phaser.Scene) {
-    scene.anims.create({
-      key: 'storm',
-      frames: scene.anims.generateFrameNumbers('storm', { start: 0, end: 2 }),
-      frameRate: 8,
-      repeat: -1
-    });
-
-    scene.anims.create({
-      key: 'soldier1',
-      frames: scene.anims.generateFrameNumbers('soldier1', { start: 0, end: 2 }),
-      frameRate: 8,
-      repeat: -1
-    });
-
-
-  }
 
 
   /**
    * Prepopulate the enemy pool to avoid runtime allocations
    */
   private prepopulateEnemyPool(): void {
+    const spawnZones = this.createSpawnZones();
+    const spawnCenter = Phaser.Utils.Array.GetRandom(spawnZones);
     // Preallocate enemy objects to avoid allocations during gameplay
-    for (let i = 0; i < GAME_CONFIG.ENEMY.MAX_COUNT; i++) {
-      const enemy = this.enemies.create(0, 0, 'storm') as Phaser.Physics.Arcade.Sprite;
+    for (let i = 0; i < GAME_CONFIG.TFIGHTER.MAX_COUNT; i++) {
+
+      const enemy = this.scene.physics.add.sprite(spawnCenter.x, spawnCenter.y, 'tfighter');
       enemy.setActive(false);
       enemy.setVisible(false);
       enemy.disableBody(true, true);
       enemy.setAlpha(1);
-
+      
       // Configure enemy properties once
       this.configureEnemyProperties(enemy);
     }
@@ -138,13 +123,8 @@ export class EnemySystem {
     });
   }
 
-
-  /**
-   * Calculate spawn interval based on player level
-   * Enemies spawn faster as player level increases
-   */
   private calculateSpawnInterval(): number {
-    const baseInterval = GAME_CONFIG.ENEMY.SPAWN_INTERVAL;
+    const baseInterval = GAME_CONFIG.TFIGHTER.SPAWN_INTERVAL;
     const playerLevel = this.player.getLevel();
 
     // Reduce spawn interval by 15% per level (minimum 30% of base interval)
@@ -165,9 +145,7 @@ export class EnemySystem {
 
     // Create new timer with updated interval
     this.spawnTimer = this.startSpawnTimer();
-    //this.startSpawnTfighterTimer();
 
-    console.log(`Enemy spawn rate updated: ${this.calculateSpawnInterval()}ms (Player Level: ${this.player.getLevel()})`);
   }
 
 
@@ -175,7 +153,7 @@ export class EnemySystem {
   private createSpawnZones():{ x: number; y: number; }[] {     
 
     const cam = this.scene.cameras.main;
-    const padding = GAME_CONFIG.ENEMY.SPAWN_PADDING || 100;
+    const padding = GAME_CONFIG.TFIGHTER.SPAWN_PADDING || 100;
 
     // Define spawn zones just off-screen (left, right, top, bottom)
     return this.spawnZones = [
@@ -204,15 +182,15 @@ export class EnemySystem {
    */
   private spawnEnemy(): void {
     // Don't spawn if we've reached the maximum number of enemies
-    if (this.getEnemyCount() >= GAME_CONFIG.ENEMY.MAX_COUNT) {
+    if (this.getEnemyCount() >= GAME_CONFIG.TFIGHTER.MAX_COUNT) {
       return;
     }
 
-    let type = "storm"; // Default enemy type
+    let type = "tfighter"; // Default enemy type
 
 
-    //if (this.player.getLevel() > 2)
-    type = Phaser.Utils.Array.GetRandom(this.enemyTypes);
+    if (this.player.getLevel() > 2)
+      type = Phaser.Utils.Array.GetRandom(this.enemyTypes);
 
     const spawnZones = this.createSpawnZones()
 
@@ -228,10 +206,13 @@ export class EnemySystem {
   }
 
 
+
+
   /**
    * Activate an enemy from the pool with specific position
    */
   private activateEnemy(enemy: Phaser.Physics.Arcade.Sprite, x: number, y: number, type: string): void {
+    enemy.setScale(1.5)
     enemy.setPosition(x, y);
     enemy.setActive(true);
     enemy.setVisible(true);
@@ -245,15 +226,7 @@ export class EnemySystem {
     // Reset health to max
     (enemy as any).health = GAME_CONFIG.ENEMY.MAX_HEALTH;
 
-    if (type == "soldier1") {
-      (enemy as any).health = GAME_CONFIG.ENEMY.MAX_HEALTH * 1.5;
-    }
-
-
     enemy.setTexture(type);
-
-    if(type != "dune")
-      enemy.play(type, true);
     
 
     // Resize collider box here
@@ -271,7 +244,6 @@ export class EnemySystem {
     (enemy as any).enemyType = type;
 
   }
-
 
 
   /**
@@ -300,25 +272,22 @@ export class EnemySystem {
    * Only needs to be done once when enemy is first created
    */
   private configureEnemyProperties(enemy: Phaser.Physics.Arcade.Sprite): void {
-    enemy.setScale(GAME_CONFIG.ENEMY.SCALE);
-    enemy.setDepth(GAME_CONFIG.ENEMY.DEPTH);
-    //enemy.setCollideWorldBounds(true);
-    // Initialize health property
-    (enemy as any).health = GAME_CONFIG.ENEMY.MAX_HEALTH;
+    const scale = 0.1;
 
+    (enemy as any).health = GAME_CONFIG.TFIGHTER.MAX_HEALTH;
+
+    // Resize collider box here
     if (enemy.body) {
-
-      enemy.body.setSize(
-
-        enemy.width * GAME_CONFIG.ENEMY.SCALE * GAME_CONFIG.ENEMY.HITBOX_SCALE,
-        enemy.height * GAME_CONFIG.ENEMY.SCALE * GAME_CONFIG.ENEMY.HITBOX_SCALE
-      );
+        enemy.body.updateFromGameObject();
+        const width = enemy.width * scale;
+        const height = enemy.height * scale;
+        enemy.body.setSize(width, height);
     }
 
-    enemy.setOffset(
-      (enemy.displayWidth - enemy.width) / 4,
-      (enemy.displayHeight - enemy.height) / 4
-    );
+    // enemy.setOffset(
+    //   (enemy.displayWidth - enemy.width) / 4,
+    //   (enemy.displayHeight - enemy.height) / 4
+    // );
 
   }
 
@@ -393,28 +362,6 @@ export class EnemySystem {
           }
         }
         
-        // if (type === 'tfighter') {
-        //   const entered = this.hasEnteredScreenMap?.get(enemy) || false;
-        //   const wasVisible = this.previousVisibility.get(enemy) ?? false;
-        //   this.previousVisibility.set(enemy, isVisibleToCamera);
-          
-        //   // Detect transition: off-screen → on-screen
-        //   if (!wasVisible && isVisibleToCamera) {
-        //     console.log("tfighter has entered the screen");
-        //     this.hasEnteredScreenMap.set(enemy, true);
-        //   }
-          
-        //   // Detect transition: on-screen → off-screen AFTER entering
-        //   if (entered && wasVisible && !isVisibleToCamera) {
-        //     console.log("tfighter has exited the screen");
-        //     this.hasEnteredScreenMap.delete(enemy);
-        //     this.deactivateEnemy(enemy);
-        //     this.activeEnemies.delete(enemy);
-        //     this.healthBars.get(enemy)?.setVisible(false);
-        //   }
-      
-        // }
-        
   
       }
     }
@@ -436,8 +383,8 @@ export class EnemySystem {
 
       if (length > 0) {
         enemy.setVelocity(
-          (this.vectorBuffer.x / length) * GAME_CONFIG.ENEMY.SPEED * 0.8,
-          (this.vectorBuffer.y / length) * GAME_CONFIG.ENEMY.SPEED * 0.8
+          (this.vectorBuffer.x / length) * GAME_CONFIG.TFIGHTER.SPEED * 0.8,
+          (this.vectorBuffer.y / length) * GAME_CONFIG.TFIGHTER.SPEED * 0.8
         );
       }
     }
@@ -448,21 +395,19 @@ export class EnemySystem {
    */
   private moveEnemyTowardTarget(enemy: Phaser.Physics.Arcade.Sprite): void {
     // Calculate direction vector to target using buffer to avoid allocation
-    this.vectorBuffer.x = this.target.x - enemy.x;
-    this.vectorBuffer.y = this.target.y - enemy.y;
+      const cam = this.scene.cameras.main;
 
-    // Normalize the direction vector manually to avoid allocation
-    const length = Math.sqrt(
-      this.vectorBuffer.x * this.vectorBuffer.x +
-      this.vectorBuffer.y * this.vectorBuffer.y
-    );
+      const centerX = cam.scrollX + cam.width / 2;
+      const centerY = cam.scrollY + cam.height / 2;
+      const dx = centerX 
+      const dy = centerY
+      const len = Math.sqrt(dx * dx + dy * dy);
 
-    if (length > 0) {
-      enemy.setVelocity(
-        (this.vectorBuffer.x / length) * GAME_CONFIG.ENEMY.SPEED,
-        (this.vectorBuffer.y / length) * GAME_CONFIG.ENEMY.SPEED
-      );
-    }
+        const vx = (dx / len) * 150;
+        const vy = (dy / len) * 150;
+
+        if(len > 0 && enemy.body)
+          enemy.setVelocity(vx, vy);
 
   }
 
@@ -517,13 +462,6 @@ export class EnemySystem {
       return true;
     }
 
-    // enemy.setTint(GAME_CONFIG.ENEMY.DAMAGE_TINT);
-    // this.scene.time.delayedCall(200, () => {
-    //   if (enemy.active) {
-    //     enemy.setTint(GAME_CONFIG.ENEMY.TINT);
-    //   }
-    // });
-
     if (knockbackForce && enemy.body) {
       const vx = enemy.body.velocity.x;
       const vy = enemy.body.velocity.y;
@@ -532,7 +470,7 @@ export class EnemySystem {
       if (length > 0) {
         const knockbackX = -(vx / length) * knockbackForce;
         const knockbackY = -(vy / length) * knockbackForce;
-        const duration = GAME_CONFIG.ENEMY.KNOCKBACK_DURATION;
+        const duration = GAME_CONFIG.TFIGHTER.KNOCKBACK_DURATION;
 
         // Calculate target position
         const targetX = enemy.x + knockbackX * (duration / 1000); // scale by duration
@@ -565,7 +503,7 @@ export class EnemySystem {
     if (!this.experienceSystem) return;
 
     // Check drop chance
-    //if (Math.random() <= GAME_CONFIG.ENEMY.EXPERIENCE_DROP_CHANCE) {
+    //if (Math.random() <= GAME_CONFIG.TFIGHTER.EXPERIENCE_DROP_CHANCE) {
     // Spawn experience orb at enemy position
     this.experienceSystem.spawnOrb(enemy.x, enemy.y);
     // Add a small visual effect
@@ -597,7 +535,6 @@ export class EnemySystem {
    */
   private createOrUpdateHealthBar(enemy: Phaser.Physics.Arcade.Sprite): void {
     let healthBar = this.healthBars.get(enemy);
-
     if (!healthBar) {
       // Create new health bar
       healthBar = this.scene.add.graphics();
@@ -622,8 +559,8 @@ export class EnemySystem {
     healthBar.clear();
 
     // Get current health percentage
-    const health = (enemy as any).health || 0;
-    const maxHealth = GAME_CONFIG.ENEMY.MAX_HEALTH;
+    const health = (enemy as any).health || 50;
+    const maxHealth = GAME_CONFIG.TFIGHTER.MAX_HEALTH;
     const healthPercent = Math.max(0, Math.min(1, health / maxHealth));
 
     // Set health bar dimensions
@@ -649,7 +586,7 @@ export class EnemySystem {
     }
 
     // Set depth to ensure it renders above the enemy
-    healthBar.setDepth(GAME_CONFIG.ENEMY.DEPTH + 1);
+    healthBar.setDepth(GAME_CONFIG.TFIGHTER.DEPTH + 1);
   }
 
   /**

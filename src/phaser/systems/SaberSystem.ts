@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config/GameConfig';
 import { EnemySystem } from './EnemySystem';
+import { TfighterSystem } from './TfighterSystem';
+
 import { Player } from '../entities/Player';
 
 export interface SaberSlashConfig {
@@ -23,6 +25,7 @@ export class SaberSystem {
   private slashes: Phaser.GameObjects.Sprite[] = [];
   private slashTimer?: Phaser.Time.TimerEvent;
   private enemySystem: EnemySystem;
+  private tfighterSystem: TfighterSystem;
   private player: Player;
 
 
@@ -44,9 +47,10 @@ export class SaberSystem {
   };
 
 
-  constructor(scene: Phaser.Scene, enemySystem: EnemySystem, player: Player) {
+  constructor(scene: Phaser.Scene, enemySystem: EnemySystem, tfighterSystem: TfighterSystem, player: Player) {
     this.scene = scene;
     this.enemySystem = enemySystem;
+    this.tfighterSystem = tfighterSystem;
     this.player = player;
     this.slashTimer = undefined;
   }
@@ -115,9 +119,10 @@ export class SaberSystem {
     if (onHit) onHit(hitbox);
     // Get enemies from the enemy system using the hitbox
     const enemies = this.enemySystem.getEnemiesNear(slash.x, slash.y, 100); // Adjust the radius as needed
-
+    const tfighters = this.tfighterSystem.getEnemiesNear(slash.x, slash.y, 100); // Adjust the radius as needed
     let dmgData = this.calculateSlashDamage(this.saberSlashConfig);
-
+    
+    
     const dmg = dmgData.damage;
     const isCritical = dmgData.isCritical;
 
@@ -125,6 +130,11 @@ export class SaberSystem {
     enemies.forEach((enemy) => {
 
       this.enemySystem.damageEnemy(enemy, dmg, 0, isCritical);
+    });
+
+    tfighters.forEach((enemy) => {
+
+      this.tfighterSystem.damageEnemy(enemy, dmg, 0, isCritical);
     });
 
 

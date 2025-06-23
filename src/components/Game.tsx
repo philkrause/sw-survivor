@@ -1,6 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import Phaser from 'phaser';
 import MainScene from '../phaser/scenes/MainScene';
+import StartScene from '../phaser/scenes/StartScene';
+
+import { GAME_CONFIG } from '../phaser/config/GameConfig';
 
 const Game: React.FC = () => {
   const gameRef = useRef<Phaser.Game | null>(null);
@@ -22,14 +25,14 @@ const Game: React.FC = () => {
         default: 'arcade',
         arcade: {
           gravity: { x: 0, y: 0 },
-          debug: false,
+          debug: GAME_CONFIG.DEBUG,
         }
       },
       roundPixels: true,
       pixelArt: true,
       backgroundColor: '#1d1805',
       zoom: 1,
-      scene: [MainScene],
+      scene: [StartScene, MainScene],
     };
 
     // Create new game instance

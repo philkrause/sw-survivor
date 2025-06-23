@@ -7,6 +7,8 @@ import { ProjectileSystem } from '../systems/ProjectileSystem';
 import { SaberSystem } from '../systems/SaberSystem';
 import { CollisionSystem } from '../systems/CollisionSystem';
 import { ForceSystem } from '../systems/ForceSystem';
+import { TfighterSystem } from '../systems/TfighterSystem';
+
 import { R2D2System } from '../systems/R2D2System';
 
 
@@ -25,10 +27,10 @@ export default class MainScene extends Phaser.Scene {
   private enemySystem!: EnemySystem;
   private collisionSystem!: CollisionSystem;
   private projectileSystem!: ProjectileSystem;
+  private tfighterSystem!: TfighterSystem;
   private forceSystem!: ForceSystem;
   private saberSystem!: SaberSystem;
   private escapeKey!: Phaser.Input.Keyboard.Key;
-
   private R2D2System!: R2D2System;
 
   private experienceSystem!: ExperienceSystem;
@@ -38,6 +40,7 @@ export default class MainScene extends Phaser.Scene {
   private background!: Phaser.GameObjects.TileSprite;
   // Game state
   private isPaused: boolean = false;
+  private blueparticle!: Phaser.GameObjects.Particles.ParticleEmitter;
 
   // Performance tracking
   private perfText!: Phaser.GameObjects.Text;
@@ -102,32 +105,27 @@ export default class MainScene extends Phaser.Scene {
     this.player = new Player(this, centerX, centerY, this.projectileSystem);
     
     this.enemySystem = new EnemySystem(this, this.player.getSprite(), this.player);
+
+    this.tfighterSystem = new TfighterSystem(this, this.player.getSprite(), this.player);
     
-    this.forceSystem = new ForceSystem(this, this.enemySystem, this.player);
+    this.forceSystem = new ForceSystem(this, this.enemySystem, this.tfighterSystem, this.player);
 
-    this.R2D2System = new R2D2System(this, this.enemySystem, this.player);
+    this.R2D2System = new R2D2System(this, this.enemySystem, this.tfighterSystem, this.player);
 
-    this.saberSystem = new SaberSystem(this, this.enemySystem, this.player);
+    this.saberSystem = new SaberSystem(this, this.enemySystem, this.tfighterSystem, this.player );
 
     this.collisionSystem = new CollisionSystem(this);
     
+    //this.setupProjectileCollisions();
 
     this.events.on('projectile-pool-initialized', this.setupProjectileCollisions, this);
 
-    // this.collisionSystem.setupEnemyEnemyCollision(
-    //   this.enemySystem.getEnemyGroup(),
-    //   this.filterEnemyCollisions.bind(this),
-    // );
 
-    this.collisionSystem.setupPlayerEnemyCollision(
-      this.player.getSprite(),
-      this.enemySystem.getEnemyGroup()
-    );
+
 
 
     // Create player at center of screen 
     this.cameras.main.startFollow(this.player.getSprite(), true, 0.1, 0.1);
-
 
 
 
@@ -154,6 +152,7 @@ export default class MainScene extends Phaser.Scene {
 
     // Connect enemy system to experience system
     this.enemySystem.setExperienceSystem(this.experienceSystem);
+    this.tfighterSystem.setExperienceSystem(this.experienceSystem);
 
     // Create upgrade system
     this.upgradeSystem = new UpgradeSystem(this, this.player);
@@ -189,7 +188,7 @@ export default class MainScene extends Phaser.Scene {
   public setupProjectileCollisions(): void {
     // We'll use overlap instead of collider for better control
     // and only check collisions between visible enemies and player
-
+    console.log("Setting up projectile collisions");
     // Basic physics collisions between enemies for minimal physics interactions
     this.physics.add.collider(
       this.enemySystem.getEnemyGroup(),
@@ -204,6 +203,7 @@ export default class MainScene extends Phaser.Scene {
     const projectileGroup = this.projectileSystem.getProjectileGroup(GAME_CONFIG.BLASTER.PLAYER.KEY);
 
     if (projectileGroup) {
+      console.log(  "Setting up projectile-enemy collisions for blaster projectiles");
       this.physics.add.overlap(
         projectileGroup,
         this.enemySystem.getEnemyGroup(),
@@ -214,8 +214,23 @@ export default class MainScene extends Phaser.Scene {
             (enemy as Phaser.Physics.Arcade.Sprite).active;
         },
         this
+      );  
+    }
+
+    if (projectileGroup) {
+      this.physics.add.overlap(
+        projectileGroup,
+        this.tfighterSystem.getEnemyGroup(),
+        this.handleProjectileEnemyCollision as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
+        // Only check collisions for active projectiles and enemies
+        (projectile, enemy) => {
+          return (projectile as Phaser.Physics.Arcade.Sprite).active &&
+            (enemy as Phaser.Physics.Arcade.Sprite).active;
+        },
+        this
       );
     }
+    
   }
 
   /**
@@ -231,6 +246,8 @@ export default class MainScene extends Phaser.Scene {
     const damage: number = p.getData('damage');
     const isCritical: boolean = p.getData('critical') ?? false;
     this.enemySystem.damageEnemy(e, damage, 0, isCritical);
+    this.tfighterSystem.damageEnemy(e, damage, 0, isCritical);
+
     this.projectileSystem.deactivate(p);
   }
 
@@ -239,66 +256,69 @@ export default class MainScene extends Phaser.Scene {
    * Custom filter to optimize enemy-enemy collisions
    * Only performs collision checks when necessary
    */
+
   private filterEnemyCollisions(
     obj1: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody | Phaser.Tilemaps.Tile,
     obj2: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody | Phaser.Tilemaps.Tile
   ): boolean {
-    // Skip collision checks between enemies that are far apart
-    // This greatly reduces the number of collision checks
     const e1 = obj1 as Phaser.Physics.Arcade.Sprite;
     const e2 = obj2 as Phaser.Physics.Arcade.Sprite;
-
+  
     // Skip inactive enemies
-    if (!e1.active || !e2.active) {
-      return false;
-    }
+    if (!e1.active || !e2.active) return false;
+  
+    const type1 = (e1 as any).enemyType;
+    const type2 = (e2 as any).enemyType;
 
-    // Calculate squared distance
+    // Skip collisions involving tfighters
+    if (type1 === 'tfighter' || type2 === 'tfighter') return false;
+
+
+  
+    // Distance-based optimization
     const dx = e1.x - e2.x;
     const dy = e1.y - e2.y;
     const distSquared = dx * dx + dy * dy;
-
-    // Only collide if they're close enough (avoid sqrt for performance)
-    // Assuming enemies are about 32 pixels wide
-    const collisionThreshold = 32; // 2x enemy width
-
+  
+    const collisionThreshold = 32; // Adjust as needed
     return distSquared < (collisionThreshold * collisionThreshold);
   }
-
+  
   /**
    * Check for collisions between player and enemies
    */
-  private checkPlayerEnemyCollisions(): void {
-    const enemies = this.enemySystem.getVisibleEnemies();
+  private checkPlayerEnemyCollisions(...enemyGroups: Phaser.Physics.Arcade.Sprite[][]): void {
     const playerBody = this.player.getSprite().body as Phaser.Physics.Arcade.Body;
-
-    let isOverlapping = false;
-
     const playerRect = new Phaser.Geom.Rectangle(
       playerBody.x,
       playerBody.y,
       playerBody.width,
       playerBody.height
     );
-
-    for (const enemy of enemies) {
-      const enemyBody = enemy.body as Phaser.Physics.Arcade.Body;
-
-      const enemyRect = new Phaser.Geom.Rectangle(
-        enemyBody.x,
-        enemyBody.y,
-        enemyBody.width,
-        enemyBody.height
-      );
-
-      if (Phaser.Geom.Intersects.RectangleToRectangle(playerRect, enemyRect)) {
-        isOverlapping = true;
-        break;
+  
+    let isOverlapping = false;
+  
+    for (const group of enemyGroups) {
+      for (const enemy of group) {
+        const enemyBody = enemy.body as Phaser.Physics.Arcade.Body;
+        const enemyRect = new Phaser.Geom.Rectangle(
+          enemyBody.x,
+          enemyBody.y,
+          enemyBody.width,
+          enemyBody.height
+        );
+  
+        if (Phaser.Geom.Intersects.RectangleToRectangle(playerRect, enemyRect)) {
+          isOverlapping = true;
+          break;
+        }
       }
+      if (isOverlapping) break;
     }
-
+    
     this.player.setOverlapping(isOverlapping);
   }
+  
 
   /**
    * Show the upgrade UI and pause the game
@@ -388,6 +408,9 @@ export default class MainScene extends Phaser.Scene {
 
     // Update enemy system
     this.enemySystem.update(time, _delta);
+    
+    // Update tfighters
+    this.tfighterSystem.update(time, _delta);
 
     // Update experience system
     this.experienceSystem.update();
@@ -405,11 +428,9 @@ export default class MainScene extends Phaser.Scene {
     if (this.player.hasForceAbility()) {
       this.forceSystem.update(time);
     }
-
-
-
     // Check for collisions between player and enemies
-    this.checkPlayerEnemyCollisions();
+    this.checkPlayerEnemyCollisions(this.enemySystem.getVisibleEnemies());
+    this.checkPlayerEnemyCollisions(this.tfighterSystem.getVisibleEnemies());
 
     // Update UI elements
     this.updateUI();
@@ -466,7 +487,7 @@ export default class MainScene extends Phaser.Scene {
   private onPlayerLevelUp(level: number): void {
     // Update enemy spawn rate based on new player level
     this.enemySystem.updateSpawnRate();
-
+    this.tfighterSystem.updateSpawnRate();
     console.log(`Player reached level ${level}! Adjusting enemy spawn rate.`);
   }
 } 

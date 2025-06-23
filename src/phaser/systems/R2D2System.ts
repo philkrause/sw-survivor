@@ -1,11 +1,12 @@
 import Phaser from 'phaser';
 import { Player } from '../entities/Player';
 import { EnemySystem } from '../systems/EnemySystem';
-
+import { TfighterSystem } from '../systems/TfighterSystem';
 
 export class R2D2System {
     private scene: Phaser.Scene;
     private enemySystem: EnemySystem;
+    private tfighterSystem: TfighterSystem;
     private player: Player;
     private sprite?: Phaser.GameObjects.Sprite;
     private angle = 0;
@@ -19,9 +20,10 @@ export class R2D2System {
     private hitEnemiesThisRevolution: WeakSet<Phaser.GameObjects.GameObject> = new WeakSet();
     
 
-    constructor(scene: Phaser.Scene, enemySystem: EnemySystem, player: Player) {
+    constructor(scene: Phaser.Scene, enemySystem: EnemySystem, tfighterSystem: TfighterSystem, player: Player) {
         this.scene = scene;
         this.enemySystem = enemySystem;
+        this.tfighterSystem = tfighterSystem;
         this.player = player;
 
 
@@ -66,7 +68,18 @@ export class R2D2System {
 
         // 4. Damage logic
         const enemies = this.enemySystem.getVisibleEnemies();
+        const tfighters = this.tfighterSystem.getVisibleEnemies();
+        
         enemies.forEach(enemy => {
+            const dist = Phaser.Math.Distance.Between(px, py, enemy.x, enemy.y);
+            if (dist < 30 && !this.hitEnemiesThisRevolution.has(enemy)) {
+                
+                this.enemySystem.damageEnemy(enemy, dmg, 0, false);
+                this.hitEnemiesThisRevolution.add(enemy);
+            }
+        });
+
+        tfighters.forEach(enemy => {
             const dist = Phaser.Math.Distance.Between(px, py, enemy.x, enemy.y);
             if (dist < 30 && !this.hitEnemiesThisRevolution.has(enemy)) {
                 

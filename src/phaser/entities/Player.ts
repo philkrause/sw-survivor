@@ -3,6 +3,7 @@ import { GAME_CONFIG } from '../config/GameConfig';
 import { normalizeVector } from '../utils/MathUtils';
 import { ProjectileSystem } from '../systems/ProjectileSystem'; // adjust path
 //import { CollisionSystem } from '../systems/CollisionSystem';
+import StartScene from "../scenes/StartScene"
 
 
 /**
@@ -24,7 +25,6 @@ export class Player {
   private wasdKeys!: GameKeys;
   private dead: boolean = false;
   private scene: Phaser.Scene;
-  
   // Blaster properties
   private attackTimer: Phaser.Time.TimerEvent | null = null;
   private projectileSystem: ProjectileSystem | null = null;
@@ -381,499 +381,535 @@ export class Player {
   private onDefeat(): void {
     // Stop player movement
     this.sprite.setVelocity(0, 0);
-
+    const cam = this.scene.cameras.main
     //death animation
     this.deathVisual();
-
-    const mainScene = this.scene.scene.get('MainScene');
+   
     this.sprite.setActive(false).setVisible(false);
-    if (mainScene && typeof (mainScene as any).gameUI?.showMessage === 'function') {
-      (mainScene as any).gameUI.showMessage('Game Over!', 0, "#ff0000", "48px");
-    }
-  }
+
+    this.scene.add.text(
+      cam.scrollX + cam.centerX,
+      cam.scrollY + cam.centerY,
+      'game over', {
+      fontFamily: 'StarJedi',
+      fontSize: '64px',
+      color: '#ff0000',
+      stroke: '#000',
+      strokeThickness: 8,
+      align: 'center'
+    }).setOrigin(0.5).setDepth(1000);
+    
+
+    const startButton = this.scene.add.text(
+      cam.scrollX + cam.centerX,
+      cam.scrollY + cam.centerY + 100,
+      'try again?',
+      {
+        fontFamily: 'StarJedi',
+        fontSize: '64px',
+        color: '#ffff00',
+        stroke: '#000',
+        strokeThickness: 8,
+        align: 'center'
+      }
+    ).setOrigin(0.5).setInteractive({ useHandCursor: true }).setDepth(1000);
+    
+
+      startButton.on('pointerdown', () => {
+        this.scene.scene.stop('MainScene');
+        this.scene.scene.remove('StartScene'); // important!
+        this.scene.scene.add('StartScene', StartScene, true); // true = auto-start
+  });
+
+  // Hover effect
+  startButton.on('pointerover', () => startButton.setStyle({ backgroundColor: '#444' }));
+  startButton.on('pointerout', () => startButton.setStyle({ backgroundColor: '#222' }));
+        
+  
+}
 
   /**
    * Start continuous damage timer (for enemy overlap)
    */
   startDamageTimer(): void {
     // Don't start a new timer if one is already running
-    if (this.damageTimer) return;
+    if(this.damageTimer) return;
 
-    // Apply initial damage
+// Apply initial damage
+this.takeDamage(GAME_CONFIG.PLAYER.DAMAGE_AMOUNT);
+
+// Set up timer for continuous damage
+this.damageTimer = this.scene.time.addEvent({
+  delay: GAME_CONFIG.PLAYER.DAMAGE_INTERVAL,
+  callback: () => {
     this.takeDamage(GAME_CONFIG.PLAYER.DAMAGE_AMOUNT);
-
-    // Set up timer for continuous damage
-    this.damageTimer = this.scene.time.addEvent({
-      delay: GAME_CONFIG.PLAYER.DAMAGE_INTERVAL,
-      callback: () => {
-        this.takeDamage(GAME_CONFIG.PLAYER.DAMAGE_AMOUNT);
-      },
-      callbackScope: this,
-      loop: true
-    });
+  },
+  callbackScope: this,
+  loop: true
+});
   }
 
-  /**
-   * Stop continuous damage timer
-   */
-  stopDamageTimer(): void {
-    if (this.damageTimer) {
-      this.damageTimer.destroy();
-      this.damageTimer = null;
-    }
+/**
+ * Stop continuous damage timer
+ */
+stopDamageTimer(): void {
+  if(this.damageTimer) {
+  this.damageTimer.destroy();
+  this.damageTimer = null;
+}
   }
 
-  /**
-   * Check if player is currently overlapping with enemies
-   */
-  setOverlapping(isOverlapping: boolean): void {
-    if (isOverlapping) {
-      this.startDamageTimer();
-    } else {
-      this.stopDamageTimer();
-    }
+/**
+ * Check if player is currently overlapping with enemies
+ */
+setOverlapping(isOverlapping: boolean): void {
+  if(isOverlapping) {
+    this.startDamageTimer();
+  } else {
+    this.stopDamageTimer();
   }
+}
 
-  /**
-   * Get current health
-   */
-  getHealth(): number {
-    return this.health;
-  }
+/**
+ * Get current health
+ */
+getHealth(): number {
+  return this.health;
+}
 
-  /**
-   * Get maximum health
-   */
-  getMaxHealth(): number {
-    return this.maxHealth;
-  }
+/**
+ * Get maximum health
+ */
+getMaxHealth(): number {
+  return this.maxHealth;
+}
 
-  isDead(): boolean {
-    return this.dead;
-  }
+isDead(): boolean {
+  return this.dead;
+}
 
   /**
    * Handle experience collection
    */
   private onExperienceCollected(_value: number, totalExperience: number): void {
-    // Update player experience
-    this.experience = totalExperience;
+  // Update player experience
+  this.experience = totalExperience;
 
-    // Check for level up
-    this.checkLevelUp();
+  // Check for level up
+  this.checkLevelUp();
 
-    // Visual feedback
-    this.showExperienceCollectedEffect();
-  }
+  // Visual feedback
+  this.showExperienceCollectedEffect();
+}
 
   /**
    * Check if player has enough experience to level up
    */
   private checkLevelUp(): void {
-    // Use a while loop to handle multiple level-ups at once
-    while (this.experience >= this.experienceToNextLevel && !this.isLevelingUp) {
-      // Level up
-      this.level++;
+  // Use a while loop to handle multiple level-ups at once
+  while(this.experience >= this.experienceToNextLevel && !this.isLevelingUp) {
+  // Level up
+  this.level++;
 
-      // Calculate new experience threshold (increases with each level)
-      this.experienceToNextLevel = Math.floor(this.experienceToNextLevel * 1.8);
+  // Calculate new experience threshold (increases with each level)
+  this.experienceToNextLevel = Math.floor(this.experienceToNextLevel * 1.8);
 
-      // Visual feedback
-      this.showLevelUpEffect();
+  // Visual feedback
+  this.showLevelUpEffect();
 
-      // Set leveling up flag to prevent multiple level-up screens
-      this.isLevelingUp = true;
+  // Set leveling up flag to prevent multiple level-up screens
+  this.isLevelingUp = true;
 
-      // Emit level up event for other systems
-      this.scene.events.emit('player-level-up', this.level);
+  // Emit level up event for other systems
+  this.scene.events.emit('player-level-up', this.level);
 
-      // Emit event to show upgrade UI
-      this.scene.events.emit('show-upgrade-ui');
-    }
+  // Emit event to show upgrade UI
+  this.scene.events.emit('show-upgrade-ui');
+}
   }
 
   /**
    * Show visual effect when collecting experience
    */
   private showExperienceCollectedEffect(): void {
-    // Flash player with cyan tint briefly
-    //this.sprite.setTint(GAME_CONFIG.EXPERIENCE_ORB.TINT);
+  // Flash player with cyan tint briefly
+  //this.sprite.setTint(GAME_CONFIG.EXPERIENCE_ORB.TINT);
 
-    this.scene.time.delayedCall(100, () => {
-      if (this.sprite.active) {
-        this.sprite.clearTint();
-      }
-    });
-  }
+  this.scene.time.delayedCall(100, () => {
+    if (this.sprite.active) {
+      this.sprite.clearTint();
+    }
+  });
+}
 
   /**
    * Show visual effect when leveling up
    */
   private showLevelUpEffect(): void {
-    // Create a circular flash around the player
-    const flash = this.scene.add.circle(
-      this.sprite.x,
-      this.sprite.y,
-      50,
-      GAME_CONFIG.EXPERIENCE_ORB.TINT,
-      0.7
-    );
-    flash.setDepth(this.sprite.depth - 1);
+  // Create a circular flash around the player
+  const flash = this.scene.add.circle(
+    this.sprite.x,
+    this.sprite.y,
+    50,
+    GAME_CONFIG.EXPERIENCE_ORB.TINT,
+    0.7
+  );
+  flash.setDepth(this.sprite.depth - 1);
 
-    // Expand and fade out
-    this.scene.tweens.add({
-      targets: flash,
-      radius: 150,
+  // Expand and fade out
+  this.scene.tweens.add({
+    targets: flash,
+    radius: 150,
+    alpha: 0,
+    duration: 500,
+    onComplete: () => {
+      flash.destroy();
+    }
+  });
+
+  // Show level up text
+  const levelText = this.scene.add.text(
+    this.sprite.x,
+    this.sprite.y - 50,
+    `Level Up! ${this.level}`,
+    {
+      fontSize: '24px',
+      color: '#00ffff',
+      stroke: '#000000',
+      strokeThickness: 4
+    }
+  ).setOrigin(0.5);
+
+  // Float up and fade out
+  this.scene.tweens.add({
+    targets: levelText,
+    y: this.sprite.y - 100,
+    alpha: 0,
+    duration: 1000,
+    onComplete: () => {
+      levelText.destroy();
+    }
+  });
+}
+
+/**
+ * Get current experience
+ */
+getExperience(): number {
+  return this.experience;
+}
+
+/**
+ * Get current level
+ */
+getLevel(): number {
+  return this.level;
+}
+
+/**
+ * Get experience required for next level
+ */
+getExperienceToNextLevel(): number {
+  return this.experienceToNextLevel;
+}
+
+/**
+ * Clean up resources
+ */
+cleanup(): void {
+  if(this.attackTimer) {
+  this.attackTimer.destroy();
+}
+
+if (this.invulnerableTimer) {
+  this.invulnerableTimer.destroy();
+}
+
+if (this.damageTimer) {
+  this.damageTimer.destroy();
+}
+
+// Remove event listeners
+this.scene.events.off('experience-collected', this.onExperienceCollected, this);
+  }
+
+/**
+ * Called when an upgrade is selected
+ */
+onUpgradeSelected(): void {
+  // Reset leveling up flag
+  this.isLevelingUp = false;
+
+  // Check for additional level-ups
+  this.checkLevelUp();
+}
+
+/**
+ * Increase player's attack speed
+ */
+increaseBlasterSpeed(multiplier: number): void {
+  this.blasterSpeedMultiplier += multiplier;
+  console.log("Blaster attack speed multiplier: " + this.blasterSpeedMultiplier);
+
+  // Update attack timer
+  if(this.attackTimer) {
+  this.attackTimer.destroy(); // Destroy the existing timer
+}
+
+const newInterval = this.getBlasterAttackInterval(); // Get the updated interval
+console.log(`Blaster speed increased to ${(1 / newInterval) * 1000} attacks/sec`);
+
+// Recreate the attack timer with the updated interval
+this.attackTimer = this.scene.time.addEvent({
+  delay: this.getBlasterAttackInterval(),
+  callback: () => this.fireProjectile(GAME_CONFIG.BLASTER.PLAYER.KEY),
+  callbackScope: this,
+  loop: true
+});
+
+  }
+
+
+//************** */ UPGRADES ****************
+
+
+
+/**
+ * Get current attack interval in ms
+ */
+getBlasterAttackInterval(): number {
+  // Lower interval means faster attacks
+  return this.baseBlasterAttackInterval / this.blasterSpeedMultiplier;
+}
+
+
+getForceInterval(): number {
+  // Lower interval means faster attacks
+  return this.baseAttackInterval / this.forceSpeedMultiplier;
+}
+
+/**
+ * Increase number of projectiles fired per attack
+ */
+increaseProjectileCount(amount: number): void {
+  this.projectileCount += amount;
+  console.log(`Projectile count increased to ${this.projectileCount}`);
+}
+
+/**
+ * Increase projectile size
+ */
+increaseProjectileSize(multiplier: number): void {
+  this.projectileSizeMultiplier += multiplier;
+  console.log(`Projectile size increased to ${this.projectileSizeMultiplier}x`);
+}
+
+/**
+ * Get current projectile size multiplier
+ */
+getProjectileSizeMultiplier(): number {
+  return this.projectileSizeMultiplier;
+}
+
+/**
+ * Increase maximum health
+ */
+increaseMaxHealth(amount: number): void {
+  this.maxHealth += amount;
+
+  // Also heal the player by the same amount
+  this.health = Math.min(this.health + amount, this.maxHealth);
+
+  // Update UI
+  this.scene.events.emit('player-health-changed', this.health, this.maxHealth);
+
+  console.log(`Max health increased to ${this.maxHealth}`);
+}
+
+/**
+ * Increase movement speed
+ */
+increaseMovementSpeed(multiplier: number): void {
+  this.speedMultiplier += multiplier;
+  console.log(`Movement speed increased to ${this.getSpeed()}`);
+}
+
+/**
+ * Get current movement speed
+ */
+getSpeed(): number {
+  return this.baseSpeed * this.speedMultiplier;
+}
+
+/**
+ * Set whether player is currently in the level-up state
+ */
+setLevelingUp(isLevelingUp: boolean): void {
+  this.isLevelingUp = isLevelingUp;
+}
+
+
+//Check if player is currently in the level-up state
+isInLevelUpState(): boolean {
+  return this.isLevelingUp;
+}
+
+
+unlockForceUpgrade(): void {
+  this.hasForceUpgrade = true;
+}
+
+
+hasForceAbility(): boolean {
+  return this.hasForceUpgrade;
+}
+
+
+unlockProjectile(type: string) {
+  this.unlockedProjectiles.add(type);
+}
+
+unlockBlasterUpgrade(): void {
+  this.hasBlasterUpgrade = true;
+}
+
+hasBlasterAbility(): boolean {
+  return this.hasBlasterUpgrade;
+}
+
+getBlasterDamage(): number {
+  return this.baseBlasterDamage * (1 * this.damageBlasterMultiplier);
+}
+
+increaseBlasterDamage(multiplier: number): void {
+  this.damageBlasterMultiplier += multiplier;
+  console.log(`Blaster damage increased to ${this.getBlasterDamage()}`);
+}
+
+
+unlockR2D2Upgrade() {
+  this.hasR2D2Upgrade = true;
+  console.log("R2D2 upgrade unlocked");
+}
+
+hasR2D2Ability(): boolean {
+  return this.hasR2D2Upgrade;
+}
+
+increaseR2D2Damage(multiplier: number): void {
+  this.hasR2D2Upgrade = true;
+  this.R2D2DamageMultiplier += multiplier;
+  console.log("Increased R2D2 damage: " + this.R2D2DamageMultiplier); // Add debug here
+}
+
+// Get the multiplier for force strength
+getR2D2StrengthMultiplier(): number {
+  return this.R2D2StrengthMultiplier;
+}
+
+
+increaseForceDamage(multiplier: number): void {
+  this.hasForceUpgrade = true;
+  this.forceDamageMultiplier += multiplier;
+  console.log("Increased force damage: " + this.forceDamageMultiplier); // Add debug here
+}
+
+increaseForceSpeed(multiplier: number): void {
+  this.forceSpeedMultiplier *= multiplier;
+  console.log("Increased force speed: " + this.forceSpeedMultiplier); // Add debug here
+}
+
+// Get the multiplier for force strength
+getForceStrengthMultiplier(): number {
+  return this.forceStrengthMultiplier;
+}
+
+
+//UPGRADEs
+increaseSaberDamage(multiplier: number): void {
+  this.saberDamageMultiplier += multiplier;
+  console.log("Increased saber damage: " + this.saberDamageMultiplier); // Add debug here
+}
+
+increaseSaberSpeed(multiplier: number): void {
+  this.saberSpeedMultiplier *= multiplier;
+  console.log("Increased saber speed: " + this.saberSpeedMultiplier); // Add debug here
+}
+
+deathVisual(): void {
+  const scene = this.scene;
+
+  // Create a graphics object to generate a cyan circle texture
+  const graphics = scene.make.graphics({ x: 0, y: 0 });
+  graphics.fillStyle(0x00ffff); // Cyan
+  graphics.fillCircle(8, 8, 8); // Circle radius 8
+  graphics.generateTexture('cyan_circle', 16, 16);
+  graphics.destroy();
+
+  // Number of particles
+  const numParticles = 20;
+
+  for(let i = 0; i <numParticles; i++) {
+  // Create a sprite at player's position
+  if (this.sprite.body) {
+    const particle = scene.physics.add.image(this.sprite.body.x, this.sprite.body.y, 'cyan_circle');
+
+    // Scale it if needed
+    particle.setScale(2);
+
+    // Random velocity in all directions
+    const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+    const speed = Phaser.Math.Between(500, 1000);
+    const vx = Math.cos(angle) * speed;
+    const vy = Math.sin(angle) * speed;
+
+    particle.setVelocity(vx, vy);
+
+    // Optional: Fade and destroy after time
+    scene.tweens.add({
+      targets: particle,
       alpha: 0,
-      duration: 500,
+      scale: 0,
+      duration: 900,
+      repeat: false,
       onComplete: () => {
-        flash.destroy();
-      }
-    });
-
-    // Show level up text
-    const levelText = this.scene.add.text(
-      this.sprite.x,
-      this.sprite.y - 50,
-      `Level Up! ${this.level}`,
-      {
-        fontSize: '24px',
-        color: '#00ffff',
-        stroke: '#000000',
-        strokeThickness: 4
-      }
-    ).setOrigin(0.5);
-
-    // Float up and fade out
-    this.scene.tweens.add({
-      targets: levelText,
-      y: this.sprite.y - 100,
-      alpha: 0,
-      duration: 1000,
-      onComplete: () => {
-        levelText.destroy();
+        particle.destroy();
+        this.scene.physics.pause();
+        this.scene.time.paused = true; // Pause the game
       }
     });
   }
-
-  /**
-   * Get current experience
-   */
-  getExperience(): number {
-    return this.experience;
-  }
-
-  /**
-   * Get current level
-   */
-  getLevel(): number {
-    return this.level;
-  }
-
-  /**
-   * Get experience required for next level
-   */
-  getExperienceToNextLevel(): number {
-    return this.experienceToNextLevel;
-  }
-
-  /**
-   * Clean up resources
-   */
-  cleanup(): void {
-    if (this.attackTimer) {
-      this.attackTimer.destroy();
-    }
-
-    if (this.invulnerableTimer) {
-      this.invulnerableTimer.destroy();
-    }
-
-    if (this.damageTimer) {
-      this.damageTimer.destroy();
-    }
-
-    // Remove event listeners
-    this.scene.events.off('experience-collected', this.onExperienceCollected, this);
-  }
-
-  /**
-   * Called when an upgrade is selected
-   */
-  onUpgradeSelected(): void {
-    // Reset leveling up flag
-    this.isLevelingUp = false;
-
-    // Check for additional level-ups
-    this.checkLevelUp();
-  }
-
-  /**
-   * Increase player's attack speed
-   */
-  increaseBlasterSpeed(multiplier: number): void {
-    this.blasterSpeedMultiplier += multiplier;
-    console.log("Blaster attack speed multiplier: " + this.blasterSpeedMultiplier);
-
-    // Update attack timer
-    if (this.attackTimer) {
-      this.attackTimer.destroy(); // Destroy the existing timer
-    }
-
-    const newInterval = this.getBlasterAttackInterval(); // Get the updated interval
-    console.log(`Blaster speed increased to ${(1 / newInterval) * 1000} attacks/sec`);
-
-    // Recreate the attack timer with the updated interval
-    this.attackTimer = this.scene.time.addEvent({
-      delay: this.getBlasterAttackInterval(),
-      callback: () => this.fireProjectile(GAME_CONFIG.BLASTER.PLAYER.KEY),
-      callbackScope: this,
-      loop: true
-    });
-
-  }
-
-
-  //************** */ UPGRADES ****************
-
-
-
-  /**
-   * Get current attack interval in ms
-   */
-  getBlasterAttackInterval(): number {
-    // Lower interval means faster attacks
-    return this.baseBlasterAttackInterval / this.blasterSpeedMultiplier;
-  }
-
-
-  getForceInterval(): number {
-    // Lower interval means faster attacks
-    return this.baseAttackInterval / this.forceSpeedMultiplier;
-  }
-
-  /**
-   * Increase number of projectiles fired per attack
-   */
-  increaseProjectileCount(amount: number): void {
-    this.projectileCount += amount;
-    console.log(`Projectile count increased to ${this.projectileCount}`);
-  }
-
-  /**
-   * Increase projectile size
-   */
-  increaseProjectileSize(multiplier: number): void {
-    this.projectileSizeMultiplier += multiplier;
-    console.log(`Projectile size increased to ${this.projectileSizeMultiplier}x`);
-  }
-
-  /**
-   * Get current projectile size multiplier
-   */
-  getProjectileSizeMultiplier(): number {
-    return this.projectileSizeMultiplier;
-  }
-
-  /**
-   * Increase maximum health
-   */
-  increaseMaxHealth(amount: number): void {
-    this.maxHealth += amount;
-
-    // Also heal the player by the same amount
-    this.health = Math.min(this.health + amount, this.maxHealth);
-
-    // Update UI
-    this.scene.events.emit('player-health-changed', this.health, this.maxHealth);
-
-    console.log(`Max health increased to ${this.maxHealth}`);
-  }
-
-  /**
-   * Increase movement speed
-   */
-  increaseMovementSpeed(multiplier: number): void {
-    this.speedMultiplier += multiplier;
-    console.log(`Movement speed increased to ${this.getSpeed()}`);
-  }
-
-  /**
-   * Get current movement speed
-   */
-  getSpeed(): number {
-    return this.baseSpeed * this.speedMultiplier;
-  }
-
-  /**
-   * Set whether player is currently in the level-up state
-   */
-  setLevelingUp(isLevelingUp: boolean): void {
-    this.isLevelingUp = isLevelingUp;
-  }
-
-
-  //Check if player is currently in the level-up state
-  isInLevelUpState(): boolean {
-    return this.isLevelingUp;
-  }
-
-
-  unlockForceUpgrade(): void {
-    this.hasForceUpgrade = true;
-  }
-
-
-  hasForceAbility(): boolean {
-    return this.hasForceUpgrade;
-  }
-
-
-  unlockProjectile(type: string) {
-    this.unlockedProjectiles.add(type);
-  }
-
-  unlockBlasterUpgrade(): void {
-    this.hasBlasterUpgrade = true;
-  }
-
-  hasBlasterAbility(): boolean {
-    return this.hasBlasterUpgrade;
-  }
-
-  getBlasterDamage(): number {
-    return this.baseBlasterDamage * (1 * this.damageBlasterMultiplier);
-  }
-
-  increaseBlasterDamage(multiplier: number): void {
-    this.damageBlasterMultiplier += multiplier;
-    console.log(`Blaster damage increased to ${this.getBlasterDamage()}`);
-  }
-
-
-  unlockR2D2Upgrade() {
-    this.hasR2D2Upgrade = true;
-    console.log("R2D2 upgrade unlocked");
-  }
-
-  hasR2D2Ability(): boolean {
-    return this.hasR2D2Upgrade;
-  }
-
-  increaseR2D2Damage(multiplier: number): void {
-    this.hasR2D2Upgrade = true;
-    this.R2D2DamageMultiplier += multiplier;
-    console.log("Increased R2D2 damage: " + this.R2D2DamageMultiplier); // Add debug here
-  }
-
-  // Get the multiplier for force strength
-  getR2D2StrengthMultiplier(): number {
-    return this.R2D2StrengthMultiplier;
-  }
-
-
-  increaseForceDamage(multiplier: number): void {
-    this.hasForceUpgrade = true;
-    this.forceDamageMultiplier += multiplier;
-    console.log("Increased force damage: " + this.forceDamageMultiplier); // Add debug here
-  }
-
-  increaseForceSpeed(multiplier: number): void {
-    this.forceSpeedMultiplier *= multiplier;
-    console.log("Increased force speed: " + this.forceSpeedMultiplier); // Add debug here
-  }
-
-  // Get the multiplier for force strength
-  getForceStrengthMultiplier(): number {
-    return this.forceStrengthMultiplier;
-  }
-
-
-  //UPGRADEs
-  increaseSaberDamage(multiplier: number): void {
-    this.saberDamageMultiplier += multiplier;
-    console.log("Increased saber damage: " + this.saberDamageMultiplier); // Add debug here
-  }
-
-  increaseSaberSpeed(multiplier: number): void {
-    this.saberSpeedMultiplier *= multiplier;
-    console.log("Increased saber speed: " + this.saberSpeedMultiplier); // Add debug here
-  }
-
-  deathVisual(): void {
-    const scene = this.scene;
-
-    // Create a graphics object to generate a cyan circle texture
-    const graphics = scene.make.graphics({ x: 0, y: 0 });
-    graphics.fillStyle(0x00ffff); // Cyan
-    graphics.fillCircle(8, 8, 8); // Circle radius 8
-    graphics.generateTexture('cyan_circle', 16, 16);
-    graphics.destroy();
-
-    // Number of particles
-    const numParticles = 20;
-
-    for (let i = 0; i < numParticles; i++) {
-      // Create a sprite at player's position
-      if(this.sprite.body) {
-        const particle = scene.physics.add.image(this.sprite.body.x, this.sprite.body.y, 'cyan_circle');
-        
-        // Scale it if needed
-        particle.setScale(2);
-
-        // Random velocity in all directions
-        const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
-        const speed = Phaser.Math.Between(500, 1000);
-        const vx = Math.cos(angle) * speed;
-        const vy = Math.sin(angle) * speed;
-
-        particle.setVelocity(vx, vy);
-
-        // Optional: Fade and destroy after time
-        scene.tweens.add({
-          targets: particle,
-          alpha: 0,
-          scale: 0,
-          duration: 900,
-          repeat: false,
-          onComplete: () => {
-            particle.destroy();
-            this.scene.physics.pause();
-            this.scene.time.paused = true; // Pause the game
-          }
-        });
-      }
-    }
+}
   }
 
 
 
-  update(): void {
+update(): void {
 
-    // Skip update if player is in level-up state
-    if (this.isLevelingUp) {
-      this.sprite.setVelocity(0, 0);
-      return;
-    }
+  // Skip update if player is in level-up state
+  if(this.isLevelingUp) {
+  this.sprite.setVelocity(0, 0);
+  return;
+}
 
-    const direction = this.getInputDirection();
-    if (direction.x !== 0 || direction.y !== 0) {
-      this.lastDirection.copy(direction);
-    }
+const direction = this.getInputDirection();
+if (direction.x !== 0 || direction.y !== 0) {
+  this.lastDirection.copy(direction);
+}
 
-    if (direction.x !== 0 || direction.y !== 0) {
-      // Normalize for diagonal movement
-      const normalized = normalizeVector(direction.x, direction.y);
+if (direction.x !== 0 || direction.y !== 0) {
+  // Normalize for diagonal movement
+  const normalized = normalizeVector(direction.x, direction.y);
 
-      // Apply movement with speed multiplier
-      this.sprite.setVelocity(
-        normalized.x * this.getSpeed(),
-        normalized.y * this.getSpeed()
-      );
-    } else {
-      // No input, stop movement
-      this.sprite.setVelocity(0, 0);
-    }
+  // Apply movement with speed multiplier
+  this.sprite.setVelocity(
+    normalized.x * this.getSpeed(),
+    normalized.y * this.getSpeed()
+  );
+} else {
+  // No input, stop movement
+  this.sprite.setVelocity(0, 0);
+}
 
 
   }

@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { Player } from '../entities/Player';
 import { EnemySystem } from '../systems/EnemySystem';
+import { TfighterSystem } from '../systems/TfighterSystem';
+
 import { GAME_CONFIG } from '../config/GameConfig';
 
 export interface ForcePoolConfig {
@@ -23,6 +25,8 @@ export interface ForcePoolConfig {
 export class ForceSystem {
   private scene: Phaser.Scene;
   private enemySystem: EnemySystem;
+  private tfighterSystem: TfighterSystem;
+
   private player: Player;
 
   private forceConfig: ForcePoolConfig = {
@@ -45,9 +49,10 @@ export class ForceSystem {
   private baseForceInterval = 2000;
 
 
-  constructor(scene: Phaser.Scene, enemySystem: EnemySystem, player: Player) {
+  constructor(scene: Phaser.Scene, enemySystem: EnemySystem, tfighterSystem: TfighterSystem, player: Player) {
     this.scene = scene;
     this.enemySystem = enemySystem;
+    this.tfighterSystem = tfighterSystem;
     this.player = player;
 
   }
@@ -61,12 +66,26 @@ export class ForceSystem {
 
     const { x, y } = this.player.getPosition();
     const enemies = this.enemySystem.getVisibleEnemies();
+    const tfighters = this.tfighterSystem.getVisibleEnemies();
 
     enemies.forEach(enemy => {
       const dist = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
 
       if (dist - 10 <= this.forceConfig.endradius!) {
         this.enemySystem.damageEnemy(
+          enemy,
+          this.forceConfig.baseDamage! * this.player.forceDamageMultiplier,
+          20,
+          false
+        );
+      }
+    });
+
+    tfighters.forEach(enemy => {
+      const dist = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
+
+      if (dist - 10 <= this.forceConfig.endradius!) {
+        this.tfighterSystem.damageEnemy(
           enemy,
           this.forceConfig.baseDamage! * this.player.forceDamageMultiplier,
           20,

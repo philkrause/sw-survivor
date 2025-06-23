@@ -9,7 +9,7 @@ export const GAME_CONFIG = {
     DEPTH: 10,
     HITBOX_SCALE: .7,
     ATTACK_INTERVAL: 1000, // ms between attacks
-    MAX_HEALTH: 100, // Maximum player health
+    MAX_HEALTH: 500, // Maximum player health
     DAMAGE_INTERVAL: 500, // ms between damage ticks when overlapping enemies
     DAMAGE_AMOUNT: 5, // Amount of damage taken per tick
     DAMAGE_TINT: 0xff0000, // Red tint when damaged
@@ -30,6 +30,21 @@ export const GAME_CONFIG = {
     MAX_COUNT: 150,
     SPAWN_PADDING: 20, // Distance from edge
     HITBOX_SCALE: .01,
+    TINT: 0xff0000,
+    MAX_HEALTH: 50, // Number of hits to defeat an enemy
+    DAMAGE_TINT: 0xff8800, // Orange tint when damaged
+    KNOCKBACK_FORCE: 300, // Force applied when hit
+    KNOCKBACK_DURATION: 200, // ms of knockback effect
+    EXPERIENCE_DROP_CHANCE: 1 // Chance (0-1) of dropping an experience orb
+  },
+  TFIGHTER: {
+    SPEED: 50,
+    SCALE: 2,
+    DEPTH: 5,
+    SPAWN_INTERVAL: 1000, // ms between spawns
+    MAX_COUNT: 150,
+    SPAWN_PADDING: 20, // Distance from edge
+    HITBOX_SCALE: 1,
     TINT: 0xff0000,
     MAX_HEALTH: 50, // Number of hits to defeat an enemy
     DAMAGE_TINT: 0xff8800, // Orange tint when damaged
@@ -85,7 +100,7 @@ export const GAME_CONFIG = {
       DURATION: 600,
       SCALE: 3,
       DEPTH: 3,
-      BASEDAMAGE: 15,
+      BASEDAMAGE: 25,
       WIDTH: 50,
       HEIGHT: 50,
       TINT: 100,

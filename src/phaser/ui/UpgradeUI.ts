@@ -13,6 +13,10 @@ export class UpgradeUI {
   private isVisible: boolean = false;
   private onUpgradeSelected: (upgradeId: string) => void;
   private overlay!: Phaser.GameObjects.Rectangle;
+  private selectedCardIndex: number = 0;
+  private selectionHighlight: Phaser.GameObjects.Rectangle | null = null;
+  private keys: Phaser.Input.Keyboard.Key[] = [];
+  private upgrades: Upgrade[] = [];
 
   constructor(scene: Phaser.Scene, upgradeSystem: UpgradeSystem) {
     this.scene = scene;
@@ -54,12 +58,40 @@ export class UpgradeUI {
     this.onUpgradeSelected = () => { };
   }
 
+  private handleKeyDown(event: KeyboardEvent): void {
+    const total = this.upgradeCards.length;
+
+    if (event.key === 'ArrowRight' || event.key.toLowerCase() === 'd') {
+      this.selectedCardIndex = (this.selectedCardIndex + 1) % total;
+      this.updateSelectionHighlight();
+    } else if (event.key === 'ArrowLeft' || event.key.toLowerCase() === 'a') {
+      this.selectedCardIndex = (this.selectedCardIndex - 1 + total) % total;
+      this.updateSelectionHighlight();
+    } else if (event.key === 'Enter') {
+
+      const upgrade = this.upgrades[this.selectedCardIndex];
+      this.onUpgradeSelected(upgrade.id);
+      this.hide();
+    }
+  }
+
+
+
   /**
    * Show the upgrade selection UI with random upgrades
    */
   show(count: number = 3, callback: (upgradeId: string) => void): void {
     if (this.isVisible) return;
 
+    this.keys = [
+      this.scene.input.keyboard!.addKey('LEFT'),
+      this.scene.input.keyboard!.addKey('RIGHT'),
+      this.scene.input.keyboard!.addKey('A'),
+      this.scene.input.keyboard!.addKey('D'),
+      this.scene.input.keyboard!.addKey('ENTER')
+    ];
+
+    this.scene.input.keyboard!.on('keydown', this.handleKeyDown, this);
     // Store callback
     this.onUpgradeSelected = callback;
 
@@ -86,6 +118,7 @@ export class UpgradeUI {
     this.animateIn();
   }
 
+
   /**
    * Hide the upgrade selection UI
    */
@@ -101,6 +134,22 @@ export class UpgradeUI {
       // Clear upgrade cards
       this.clearUpgradeCards();
     });
+
+    this.container.setVisible(false);
+
+    // Clean up input
+    this.scene.input.keyboard!.off('keydown', this.handleKeyDown, this);
+    this.keys.forEach(key => key.destroy());
+    this.keys = [];
+  }
+
+
+  private updateSelectionHighlight(): void {
+    const selectedCard = this.upgradeCards[this.selectedCardIndex];
+    if (this.selectionHighlight && selectedCard) {
+      this.selectionHighlight.setPosition(selectedCard.x, selectedCard.y);
+      this.container.bringToTop(this.selectionHighlight); // Make sure highlight stays on top
+    }
   }
 
   /**
@@ -113,38 +162,32 @@ export class UpgradeUI {
     this.upgradeCards = [];
   }
 
-  // private createOverlay(): void {
-  //   const cam = this.scene.cameras.main;
-  //   this.overlay = this.scene.add.rectangle(
-  //     cam.scrollX + cam.width / 2,
-  //     cam.scrollY + cam.height / 2,
-  //     cam.width,
-  //     cam.height,
-  //     0x000000,
-  //     0 // Start transparent
-  //   ).setScrollFactor(0);
-  
-  //   this.container.add(this.overlay);
-  // }
 
   /**
    * Create upgrade cards for the given upgrades
    */
   private createUpgradeCards(upgrades: Upgrade[]): void {
+
+
+
     const cardWidth = 250;
     const cardHeight = 300;
     const cardSpacing = 30;
 
     // Calculate total width of all cards including spacing
     const totalWidth = (cardWidth * upgrades.length) + (cardSpacing * (upgrades.length - 1));
-    
-    
+
+
+
     // Calculate starting X position to center all cards
     const cam = this.scene.cameras.main;
     const startX = cam.scrollX + (cam.width - totalWidth) / 2 + (cardWidth / 2);
     const startY = cam.scrollY + cam.height / 2;
 
-    upgrades.forEach((upgrade, index) => {
+    this.upgrades = upgrades;
+    this.selectedCardIndex = 0;
+
+    this.upgrades.forEach((upgrade, index) => {
       // Create card container
       const card = this.scene.add.container(
         startX + (cardWidth + cardSpacing) * index,
@@ -250,6 +293,23 @@ export class UpgradeUI {
 
       // Start with scale 0 for animation
       card.setScale(0);
+
+      if (index === 0) {
+
+        // Cleanup old highlight if it exists
+        if (this.selectionHighlight) {
+          this.selectionHighlight.destroy();
+          this.selectionHighlight = null;
+        }
+        this.selectionHighlight = this.scene.add.rectangle(
+          card.x, card.y,
+          cardWidth + 10, cardHeight + 10,
+          0xffff00, 0.25
+        ).setStrokeStyle(4, 0xffff00).setOrigin(0.5);
+
+        this.container.add(this.selectionHighlight);
+      }
+
     });
   }
 
