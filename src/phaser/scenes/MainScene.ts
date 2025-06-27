@@ -166,8 +166,8 @@ export default class MainScene extends Phaser.Scene {
     // Listen for player level up events to adjust enemy spawn rate
     this.events.on('player-level-up', this.onPlayerLevelUp, this);
 
-    this.events.once('player-level-5', (player: Player) => {
-    });
+    // this.events.once('player-level-5', (player: Player) => {
+    // });
     
 
     // Add performance monitor
