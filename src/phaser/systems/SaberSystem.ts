@@ -55,6 +55,10 @@ export class SaberSystem {
     this.slashTimer = undefined;
   }
 
+  setTfighterSystem(tfighterSystem: TfighterSystem) {
+    this.tfighterSystem = tfighterSystem;
+  }
+
 
   /**
    * Starts repeating saber attacks.
@@ -119,6 +123,7 @@ export class SaberSystem {
     if (onHit) onHit(hitbox);
     // Get enemies from the enemy system using the hitbox
     const enemies = this.enemySystem.getEnemiesNear(slash.x, slash.y, 100); // Adjust the radius as needed
+    
     const tfighters = this.tfighterSystem.getEnemiesNear(slash.x, slash.y, 100); // Adjust the radius as needed
     let dmgData = this.calculateSlashDamage(this.saberSlashConfig);
     

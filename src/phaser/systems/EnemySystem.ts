@@ -14,7 +14,7 @@ export class EnemySystem {
   private target: Phaser.Physics.Arcade.Sprite;
   private player: Player;
   private experienceSystem: ExperienceSystem | null = null;
-  private enemyTypes = ['storm', 'soldier1', 'dune'];
+  private enemyTypes = ['storm', 'dune'];
 
   // Tracking active enemies for improved performance
   private activeEnemies: Set<Phaser.Physics.Arcade.Sprite> = new Set();
@@ -209,7 +209,9 @@ export class EnemySystem {
     let type = "storm"; // Default enemy type
 
 
-    //if (this.player.getLevel() > 2)
+    if (this.player.getLevel() > 4)
+      this.enemyTypes.push("soldier1");
+
     type = Phaser.Utils.Array.GetRandom(this.enemyTypes);
 
     this.spawnZones = this.createSpawnZones()
@@ -244,7 +246,11 @@ export class EnemySystem {
     (enemy as any).health = GAME_CONFIG.ENEMY.MAX_HEALTH;
 
     if (type == "soldier1") {
-      (enemy as any).health = GAME_CONFIG.ENEMY.MAX_HEALTH * 1.5;
+      (enemy as any).health = GAME_CONFIG.ENEMY.MAX_HEALTH * 1.2;
+    }
+
+    if (type == "dune") {
+      (enemy as any).health = GAME_CONFIG.ENEMY.MAX_HEALTH * .75;
     }
 
 

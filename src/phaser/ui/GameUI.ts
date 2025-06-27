@@ -194,12 +194,12 @@ export class GameUI {
     const expPercent = Math.min(1, current / nextLevel);
     
     // Set dimensions
-    const width = GAME_CONFIG.PLAYER.HEALTH_BAR_WIDTH;
-    const height = 10;
+    const width = this.scene.cameras.main.width;
+    const height = 30;
     
     // Position at bottom-center of screen, below health bar
     const x = (this.scene.cameras.main.width - width) / 2;
-    const y = this.scene.cameras.main.height - height - 10; // 10px from bottom
+    const y = 0;
     
     // Draw background (empty experience)
     experienceBar.fillStyle(0x222222, 0.8);

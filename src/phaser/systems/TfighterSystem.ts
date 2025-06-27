@@ -214,6 +214,7 @@ export class TfighterSystem {
     enemy.setPosition(x, y);
     enemy.setActive(true);
     enemy.setVisible(true);
+    enemy.setDepth(50);
     if (enemy.body)
       enemy.body.enable = true;// Activate the physics body
     //enemy.setVelocity(0, 0);
@@ -226,14 +227,15 @@ export class TfighterSystem {
 
     enemy.setTexture(type);
     
-
     // Resize collider box here
     if (enemy.body) {
       enemy.body.setSize(16, 16);
+      enemy.body.checkCollision.none = false;
     }
 
     // Create or update health bar
     this.createOrUpdateHealthBar(enemy);
+    this.launchEnemy(enemy);
 
     // Add to our tracking set for faster iteration
     this.activeEnemies.add(enemy);
@@ -271,7 +273,7 @@ export class TfighterSystem {
    */
   private configureEnemyProperties(enemy: Phaser.Physics.Arcade.Sprite): void {
     const scale = 0.1;
-
+    enemy.setDepth(GAME_CONFIG.TFIGHTER.DEPTH);
     (enemy as any).health = GAME_CONFIG.TFIGHTER.MAX_HEALTH;
 
     // Resize collider box here
@@ -287,82 +289,6 @@ export class TfighterSystem {
     //   (enemy.displayHeight - enemy.height) / 4
     // );
 
-  }
-
-  /**
-   * Update all active enemies - optimized for large quantities
-   */
-  update(_time: number, _delta: number): void {
-    // Update camera rectangle for visibility checks
-    const camera = this.scene.cameras.main;
-    if (camera) {
-      this.cameraRect.setTo(
-        camera.scrollX - 100, // Buffer zone outside camera
-        camera.scrollY - 100,
-        camera.width + 200,
-        camera.height + 200
-      );
-    }
-
-    // Clear visible enemies array without allocating new one
-    this.visibleEnemies.length = 0;
-
-    // Process active enemies
-    for (const enemy of this.activeEnemies) {
-      
-      //const type = (enemy as any).enemyType;
-      
-      // Only process on-screen enemies or those close to screen
-      if (Phaser.Geom.Rectangle.Contains(this.cameraRect, enemy.x, enemy.y)) {
-        this.visibleEnemies.push(enemy);
-                
-       
-        this.moveEnemyTowardTarget(enemy);
-
-        // Flip sprite based on direction
-        if (enemy.body!.velocity.x < 0) {
-          enemy.setFlipX(true); // moving left
-        } else if (enemy.body!.velocity.x > 0) {
-          enemy.setFlipX(false); // moving right
-        }
-        // adjust to your preferred sizeate health bar position
-        this.updateHealthBarPosition(enemy);
-      } else {
-        // Optionally apply simplified physics for off-screen enemies
-        this.moveOffscreenEnemyBasic(enemy);
-
-        // Hide health bar for off-screen enemies
-        const healthBar = this.healthBars.get(enemy);
-        if (healthBar) {
-          healthBar.setVisible(false);
-        }
-
-        const isVisibleToCamera =
-          enemy.x + enemy.width > camera.worldView.left &&
-          enemy.x - enemy.width < camera.worldView.right &&
-          enemy.y + enemy.height > camera.worldView.top &&
-          enemy.y - enemy.height < camera.worldView.bottom;
-
-
-        //if enemy is off screen for 2 seconds despawn enemy
-        if (!isVisibleToCamera) {
-          const elapsed = this.offscreenTimers.get(enemy) || 0;
-          const newElapsed = elapsed + _delta;
-          this.offscreenTimers.set(enemy, newElapsed);
-
-          if (newElapsed > 10) {
-            this.deactivateEnemy(enemy);
-            this.offscreenTimers.delete(enemy);
-            this.activeEnemies.delete(enemy);
-          } else {
-            //if back on screen reset the timer
-            this.offscreenTimers.delete(enemy);
-          }
-        }
-        
-  
-      }
-    }
   }
 
   /**
@@ -391,24 +317,27 @@ export class TfighterSystem {
   /**
    * Move an enemy toward the target (player) - accurate version for visible enemies
    */
-  private moveEnemyTowardTarget(enemy: Phaser.Physics.Arcade.Sprite): void {
-    // Calculate direction vector to target using buffer to avoid allocation
-      const cam = this.scene.cameras.main;
-
-      const centerX = cam.scrollX + cam.width / 2;
-      const centerY = cam.scrollY + cam.height / 2;
-      const dx = centerX 
-      const dy = centerY
-      const len = Math.sqrt(dx * dx + dy * dy);
-
-        const vx = (dx / len) * 150;
-        const vy = (dy / len) * 150;
-
-        if(len > 0 && enemy.body)
-          enemy.setVelocity(vx, vy);
-
+  private launchEnemy(enemy: Phaser.Physics.Arcade.Sprite): void {
+    const cam = this.scene.cameras.main;
+  
+    // Target position (center of screen)
+    const centerX = cam.scrollX + cam.width / 2;
+    const centerY = cam.scrollY + cam.height / 2;
+  
+    // Direction from enemy to center
+    const dx = centerX - enemy.x;
+    const dy = centerY - enemy.y;
+    const len = Math.sqrt(dx * dx + dy * dy);
+  
+    if (len > 0 && enemy.body) {
+      const speed = 150;
+      const vx = (dx / len) * speed;
+      const vy = (dy / len) * speed;
+      enemy.setVelocity(vx, vy);
+    }
   }
-
+  
+  
   /**
    * Set the experience system reference
    */
@@ -597,6 +526,77 @@ export class TfighterSystem {
     healthBar.setPosition(enemy.x, enemy.y);
     healthBar.setVisible(true);
   }
+
+   /**
+   * Update all active enemies - optimized for large quantities
+   */
+   update(_time: number, _delta: number): void {
+    // Update camera rectangle for visibility checks
+    const camera = this.scene.cameras.main;
+    if (camera) {
+      this.cameraRect.setTo(
+        camera.scrollX - 100, // Buffer zone outside camera
+        camera.scrollY - 100,
+        camera.width + 200,
+        camera.height + 200
+      );
+    }
+
+    // Clear visible enemies array without allocating new one
+    this.visibleEnemies.length = 0;
+
+    // Process active enemies
+    for (const enemy of this.activeEnemies) {
+      
+      //const type = (enemy as any).enemyType;
+      
+      // Only process on-screen enemies or those close to screen
+      if (Phaser.Geom.Rectangle.Contains(this.cameraRect, enemy.x, enemy.y)) {
+        this.visibleEnemies.push(enemy);
+                
+       
+        //this.moveEnemyTowardTarget(enemy);
+
+        // adjust to your preferred sizeate health bar position
+        this.updateHealthBarPosition(enemy);
+      } else {
+        // Optionally apply simplified physics for off-screen enemies
+        this.moveOffscreenEnemyBasic(enemy);
+
+        // Hide health bar for off-screen enemies
+        const healthBar = this.healthBars.get(enemy);
+        if (healthBar) {
+          healthBar.setVisible(false);
+        }
+
+        const isVisibleToCamera =
+          enemy.x + enemy.width > camera.worldView.left &&
+          enemy.x - enemy.width < camera.worldView.right &&
+          enemy.y + enemy.height > camera.worldView.top &&
+          enemy.y - enemy.height < camera.worldView.bottom;
+
+
+        //if enemy is off screen for 2 seconds despawn enemy
+        if (!isVisibleToCamera) {
+          const elapsed = this.offscreenTimers.get(enemy) || 0;
+          const newElapsed = elapsed + _delta;
+          this.offscreenTimers.set(enemy, newElapsed);
+
+          if (newElapsed > 10) {
+            this.deactivateEnemy(enemy);
+            this.offscreenTimers.delete(enemy);
+            this.activeEnemies.delete(enemy);
+          } else {
+            //if back on screen reset the timer
+            this.offscreenTimers.delete(enemy);
+          }
+        }
+        
+  
+      }
+    }
+  }
+
 
   /**
    * Clean up and destroy enemies if necessary

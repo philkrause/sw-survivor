@@ -212,33 +212,33 @@ export class UpgradeSystem {
       isAvailable: (player) => player.hasBlasterAbility()
     });
 
-    // Add health upgrade
-    // this.availableUpgrades.push({
-    //   id: 'max_health',
-    //   name: 'Max Health',
-    //   description: 'Increase maximum health by 20',
-    //   icon: 'health_icon',
-    //   level: 0,
-    //   maxLevel: 5,
-    //   apply: (player) => {
-    //     player.increaseMaxHealth(20);
-    //   },
-    //   isAvailable: () => true // ✅ Evaluated when needed
-    // });
+    //Add health upgrade
+    this.availableUpgrades.push({
+      id: 'max_health',
+      name: 'Max Health',
+      description: 'Increase maximum health by 20',
+      icon: 'health_icon',
+      level: 0,
+      maxLevel: 5,
+      apply: (player) => {
+        player.increaseMaxHealth(20);
+      },
+      isAvailable: () => true // ✅ Evaluated when needed
+    });
 
-    // // //Add movement speed upgrade
-    // this.availableUpgrades.push({
-    //   id: 'movement_speed',
-    //   name: 'Movement Speed',
-    //   description: 'Increase movement speed by 10%',
-    //   icon: 'movement_icon',
-    //   level: 0,
-    //   maxLevel: 3,
-    //   apply: (player) => {
-    //     player.increaseMovementSpeed(0.1);
-    //   },
-    //   isAvailable: () => true // ✅ Evaluated when needed
-    // });
+    // //Add movement speed upgrade
+    this.availableUpgrades.push({
+      id: 'movement_speed',
+      name: 'Movement Speed',
+      description: 'Increase movement speed by 10%',
+      icon: 'movement_icon',
+      level: 0,
+      maxLevel: 3,
+      apply: (player) => {
+        player.increaseMovementSpeed(0.1);
+      },
+      isAvailable: () => true // ✅ Evaluated when needed
+    });
   }
 
   /**
@@ -339,7 +339,7 @@ export class UpgradeSystem {
         targets: sprite,
         y: cameraY + cameraHeight,
         angle: 0, // Spin 360 degrees
-        duration: Phaser.Math.Between(2000, 4000), // Random fall duration
+        duration: Phaser.Math.Between(4000, 6000), // Random fall duration
         ease: 'Linear',
         loop: -1,
         onComplete: () => {

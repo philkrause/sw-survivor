@@ -389,7 +389,7 @@ export class Player {
 
     this.scene.add.text(
       cam.scrollX + cam.centerX,
-      cam.scrollY + cam.centerY,
+      cam.scrollY + cam.centerY - 25,
       'game over', {
       fontFamily: 'StarJedi',
       fontSize: '64px',
@@ -402,7 +402,7 @@ export class Player {
 
     const startButton = this.scene.add.text(
       cam.scrollX + cam.centerX,
-      cam.scrollY + cam.centerY + 100,
+      cam.scrollY + cam.centerY + 45,
       'try again?',
       {
         fontFamily: 'StarJedi',
@@ -423,7 +423,7 @@ export class Player {
 
   // Hover effect
   startButton.on('pointerover', () => startButton.setStyle({ backgroundColor: '#444' }));
-  startButton.on('pointerout', () => startButton.setStyle({ backgroundColor: '#222' }));
+  startButton.on('pointerout', () => startButton.setStyle({ backgroundColor: '' }));
         
   
 }
@@ -507,26 +507,30 @@ isDead(): boolean {
    */
   private checkLevelUp(): void {
   // Use a while loop to handle multiple level-ups at once
-  while(this.experience >= this.experienceToNextLevel && !this.isLevelingUp) {
-  // Level up
-  this.level++;
+    while(this.experience >= this.experienceToNextLevel && !this.isLevelingUp) {
+      // Level up
+      this.level++;
 
-  // Calculate new experience threshold (increases with each level)
-  this.experienceToNextLevel = Math.floor(this.experienceToNextLevel * 1.8);
+      // Calculate new experience threshold (increases with each level)
+      this.experienceToNextLevel = Math.floor(this.experienceToNextLevel * 1.8);
 
-  // Visual feedback
-  this.showLevelUpEffect();
+      // Visual feedback
+      this.showLevelUpEffect();
 
-  // Set leveling up flag to prevent multiple level-up screens
-  this.isLevelingUp = true;
+      // Set leveling up flag to prevent multiple level-up screens
+      this.isLevelingUp = true;
 
-  // Emit level up event for other systems
-  this.scene.events.emit('player-level-up', this.level);
+      // Emit level up event for other systems
+      this.scene.events.emit('player-level-up', this.level);
 
-  // Emit event to show upgrade UI
-  this.scene.events.emit('show-upgrade-ui');
+      // Emit event to show upgrade UI
+      this.scene.events.emit('show-upgrade-ui');
+
+      if (this.level === 5) {
+        this.scene.events.emit('player-level-5', this);
+      }
+    }
 }
-  }
 
   /**
    * Show visual effect when collecting experience

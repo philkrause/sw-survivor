@@ -40,8 +40,8 @@ export const GAME_CONFIG = {
   TFIGHTER: {
     SPEED: 50,
     SCALE: 2,
-    DEPTH: 5,
-    SPAWN_INTERVAL: 1000, // ms between spawns
+    DEPTH: 7,
+    SPAWN_INTERVAL: 5000, // ms between spawns
     MAX_COUNT: 150,
     SPAWN_PADDING: 20, // Distance from edge
     HITBOX_SCALE: 1,

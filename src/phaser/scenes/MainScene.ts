@@ -104,7 +104,7 @@ export default class MainScene extends Phaser.Scene {
     this.enemySystem = new EnemySystem(this, this.player.getSprite(), this.player);
 
     this.tfighterSystem = new TfighterSystem(this, this.player.getSprite(), this.player);
-    
+
     this.forceSystem = new ForceSystem(this, this.enemySystem, this.tfighterSystem, this.player);
 
     this.R2D2System = new R2D2System(this, this.enemySystem, this.tfighterSystem, this.player);
@@ -149,6 +149,7 @@ export default class MainScene extends Phaser.Scene {
     this.enemySystem.setExperienceSystem(this.experienceSystem);
     this.tfighterSystem.setExperienceSystem(this.experienceSystem);
 
+
     // Create upgrade system
     this.upgradeSystem = new UpgradeSystem(this, this.player);
 
@@ -165,6 +166,10 @@ export default class MainScene extends Phaser.Scene {
     // Listen for player level up events to adjust enemy spawn rate
     this.events.on('player-level-up', this.onPlayerLevelUp, this);
 
+    this.events.once('player-level-5', (player: Player) => {
+    });
+    
+
     // Add performance monitor
     this.perfText = this.add.text(10, this.cameras.main.height - 30, 'FPS: 0', {
       fontSize: '16px',
@@ -175,7 +180,6 @@ export default class MainScene extends Phaser.Scene {
 
 
   }
-
 
   public setupProjectileCollisions(): void {
     // We'll use overlap instead of collider for better control
@@ -401,8 +405,9 @@ export default class MainScene extends Phaser.Scene {
     // Update enemy system
     this.enemySystem.update(time, _delta);
     
-    // Update tfighters
-    this.tfighterSystem.update(time, _delta);
+    if (this.tfighterSystem) {
+      this.tfighterSystem.update(time, _delta);
+    }
 
     // Update experience system
     this.experienceSystem.update();
@@ -422,7 +427,9 @@ export default class MainScene extends Phaser.Scene {
     }
     // Check for collisions between player and enemies
     this.checkPlayerEnemyCollisions(this.enemySystem.getVisibleEnemies());
-    this.checkPlayerEnemyCollisions(this.tfighterSystem.getVisibleEnemies());
+
+    if(this.tfighterSystem)
+      this.checkPlayerEnemyCollisions(this.tfighterSystem.getVisibleEnemies());
 
     // Update UI elements
     this.updateUI();
