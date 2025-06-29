@@ -20,7 +20,7 @@ export class TfighterSystem {
   private activeEnemies: Set<Phaser.Physics.Arcade.Sprite> = new Set();
   private cameraRect: Phaser.Geom.Rectangle = new Phaser.Geom.Rectangle();
   private visibleEnemies: Array<Phaser.Physics.Arcade.Sprite> = [];
-  private spawnZones: Array<{ x: number, y: number }> = [];
+
   // tracking enemies that are off screen 
   private offscreenTimers: Map<Phaser.Physics.Arcade.Sprite, number> = new Map();
 
@@ -152,9 +152,8 @@ export class TfighterSystem {
 
     const cam = this.scene.cameras.main;
     const padding = GAME_CONFIG.TFIGHTER.SPAWN_PADDING || 100;
-
     // Define spawn zones just off-screen (left, right, top, bottom)
-    return this.spawnZones = [
+    return [
       {
         x: Phaser.Math.Between(cam.scrollX - padding * 2, cam.scrollX - padding),
         y: Phaser.Math.Between(cam.scrollY - padding, cam.scrollY + cam.height + padding)
@@ -218,10 +217,6 @@ export class TfighterSystem {
 
     if (enemy.body)
       enemy.body.enable = true;// Activate the physics body
-    //enemy.setVelocity(0, 0);
-
-    // Reset any enemy state that needs resetting
-    //enemy.setTint(GAME_CONFIG.ENEMY.TINT);
 
     // Reset health to max
     (enemy as any).health = GAME_CONFIG.ENEMY.MAX_HEALTH;
