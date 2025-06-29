@@ -127,9 +127,7 @@ export default class MainScene extends Phaser.Scene {
     //setup animations
     Player.setupAnimations(this);
     EnemySystem.setupEnemyAnimations(this);
-
-
-
+    
     //setup saber attacks
     this.saberSystem.startAutoSlash(() => {
       const playerBody = this.player.getSprite();
@@ -140,6 +138,18 @@ export default class MainScene extends Phaser.Scene {
         facingLeft: playerBody.flipX
       };
     });
+    this.events.on('upgrade-saber', () => {
+      const playerBody = this.player.getSprite();
+
+      this.saberSystem.startAutoSlash(() => ({
+        x: playerBody.x,
+        y: playerBody.y,
+        facingLeft: playerBody.flipX
+      }))
+    });
+    
+
+
 
 
     // Create experience system
@@ -217,7 +227,7 @@ export default class MainScene extends Phaser.Scene {
       this.physics.add.overlap(
         projectileGroup,
         this.tfighterSystem.getEnemyGroup(),
-        this.handleProjectileEnemyCollision as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
+        this.handleProjectileTfighterCollision as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
         // Only check collisions for active projectiles and enemies
         (projectile, enemy) => {
           return (projectile as Phaser.Physics.Arcade.Sprite).active &&
@@ -242,6 +252,19 @@ export default class MainScene extends Phaser.Scene {
     const damage: number = p.getData('damage');
     const isCritical: boolean = p.getData('critical') ?? false;
     this.enemySystem.damageEnemy(e, damage, 0, isCritical);
+
+    this.projectileSystem.deactivate(p);
+  }
+
+  private handleProjectileTfighterCollision(
+    projectile: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody | Phaser.Tilemaps.Tile,
+    enemy: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody | Phaser.Tilemaps.Tile
+  ): void {
+    const p = projectile as Phaser.Physics.Arcade.Sprite;
+    const e = enemy as Phaser.Physics.Arcade.Sprite;
+
+    const damage: number = p.getData('damage');
+    const isCritical: boolean = p.getData('critical') ?? false;
     this.tfighterSystem.damageEnemy(e, damage, 0, isCritical);
 
     this.projectileSystem.deactivate(p);
@@ -405,9 +428,8 @@ export default class MainScene extends Phaser.Scene {
     // Update enemy system
     this.enemySystem.update(time, _delta);
     
-    if (this.tfighterSystem) {
-      this.tfighterSystem.update(time, _delta);
-    }
+    this.tfighterSystem.update(time, _delta);
+
 
     // Update experience system
     this.experienceSystem.update();

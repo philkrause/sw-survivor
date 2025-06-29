@@ -225,7 +225,7 @@ export class GameUI {
     
     // Add new text
     this.scene.add.text(x + width / 2, y + height / 2, expText, {
-      fontSize: '10px',
+      fontSize: '12px',
       color: '#ffffff',
       fontStyle: 'bold'
     }).setOrigin(0.5).setName('exp-text').setScrollFactor(0).setDepth(1000);

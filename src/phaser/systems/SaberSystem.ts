@@ -67,11 +67,12 @@ export class SaberSystem {
     getPlayerData: () => { x: number; y: number; facingLeft: boolean },
     onHit?: (hitbox: Phaser.Geom.Rectangle) => void
   ): void {
+    console.log("Star Auto Slash is called")
 
     if (this.slashTimer) {
+      console.log("Slash timer destroyed")
       this.slashTimer.destroy();
     }
-
 
     this.slashTimer = this.scene.time.addEvent({
       delay: this.saberSlashConfig.interval * this.player.saberSpeedMultiplier,
@@ -150,7 +151,7 @@ export class SaberSystem {
       targets: slash,
       scale: this.saberSlashConfig.scale,
       alpha: 0,
-      duration: this.saberSlashConfig.duration,
+      duration: 600,
       ease: 'Cubic.easeOut',
       onComplete: () => {
         slash.destroy();

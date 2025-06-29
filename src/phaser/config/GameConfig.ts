@@ -31,7 +31,7 @@ export const GAME_CONFIG = {
     SPAWN_PADDING: 20, // Distance from edge
     HITBOX_SCALE: .01,
     TINT: 0xff0000,
-    MAX_HEALTH: 50, // Number of hits to defeat an enemy
+    MAX_HEALTH: 25, // Number of hits to defeat an enemy
     DAMAGE_TINT: 0xff8800, // Orange tint when damaged
     KNOCKBACK_FORCE: 300, // Force applied when hit
     KNOCKBACK_DURATION: 200, // ms of knockback effect

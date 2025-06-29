@@ -131,7 +131,7 @@ export class ForceSystem {
     const actualInterval = this.baseForceInterval * this.player.forceSpeedMultiplier;
     if (time - this.lastForceTime >= actualInterval) {
       this.applyForce(time);
-
     }
   }
+  
 }

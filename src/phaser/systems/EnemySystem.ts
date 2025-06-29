@@ -14,7 +14,7 @@ export class EnemySystem {
   private target: Phaser.Physics.Arcade.Sprite;
   private player: Player;
   private experienceSystem: ExperienceSystem | null = null;
-  private enemyTypes = ['storm', 'dune'];
+  private enemyTypes = ['dune'];
 
   // Tracking active enemies for improved performance
   private activeEnemies: Set<Phaser.Physics.Arcade.Sprite> = new Set();
@@ -86,6 +86,7 @@ export class EnemySystem {
   }
 
   public static setupEnemyAnimations(scene: Phaser.Scene) {
+    console.log("Setting up enemy animations");
     scene.anims.create({
       key: 'storm',
       frames: scene.anims.generateFrameNumbers('storm', { start: 0, end: 2 }),
@@ -206,13 +207,19 @@ export class EnemySystem {
       return;
     }
 
-    let type = "storm"; // Default enemy type
+    let type = "dune"; // Default enemy type
 
+    if (this.player.getLevel() > 1)
+      this.enemyTypes.push("storm");
+      this.enemyTypes.push("dune");
 
-    if (this.player.getLevel() > 4)
+    if (this.player.getLevel() > 2)
       this.enemyTypes.push("soldier1");
 
+    
     type = Phaser.Utils.Array.GetRandom(this.enemyTypes);
+    
+    console.log("Spawning enemy of type: " + type);
 
     this.spawnZones = this.createSpawnZones()
 
@@ -226,6 +233,7 @@ export class EnemySystem {
     if (enemy)
       this.activateEnemy(enemy, x, y, type);
   }
+
 
 
   /**

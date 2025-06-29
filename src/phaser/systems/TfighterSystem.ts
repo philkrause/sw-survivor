@@ -80,7 +80,7 @@ export class TfighterSystem {
     return this.scene.physics.add.group({
       classType: Phaser.Physics.Arcade.Sprite,
       maxSize: GAME_CONFIG.TFIGHTER.MAX_COUNT,
-      runChildUpdate: false // We'll handle updates manually for better control
+      runChildUpdate: false
     });
   }
 
@@ -90,16 +90,16 @@ export class TfighterSystem {
    * Prepopulate the enemy pool to avoid runtime allocations
    */
   private prepopulateEnemyPool(): void {
-    this.spawnZones = this.createSpawnZones();
     const spawnCenter = Phaser.Utils.Array.GetRandom(this.spawnZones);
     // Preallocate enemy objects to avoid allocations during gameplay
     for (let i = 0; i < GAME_CONFIG.TFIGHTER.MAX_COUNT; i++) {
 
-      const enemy = this.scene.physics.add.sprite(spawnCenter.x, spawnCenter.y, 'tfighter');
-      enemy.setActive(false);
+      const enemy = this.scene.physics.add.sprite(0,0, 'tfighter');
       enemy.setVisible(false);
+      enemy.setAlpha(0); // for extra safety
+      enemy.setActive(false);
       enemy.disableBody(true, true);
-      enemy.setAlpha(1);
+      
       
       // Configure enemy properties once
       this.configureEnemyProperties(enemy);
@@ -141,6 +141,7 @@ export class TfighterSystem {
       this.spawnTimer.destroy();
     }
 
+    
     // Create new timer with updated interval
     this.spawnTimer = this.startSpawnTimer();
 
@@ -187,8 +188,7 @@ export class TfighterSystem {
     let type = "tfighter"; // Default enemy type
 
 
-    if (this.player.getLevel() > 2)
-      type = Phaser.Utils.Array.GetRandom(this.enemyTypes);
+    type = Phaser.Utils.Array.GetRandom(this.enemyTypes);
 
     const spawnZones = this.createSpawnZones()
 
@@ -199,8 +199,9 @@ export class TfighterSystem {
     const enemy = this.enemies.get(x, y, type) as Phaser.Physics.Arcade.Sprite;
 
 
-    if (enemy)
+    if (enemy && this.player. getLevel() > 1) {
       this.activateEnemy(enemy, x, y, type);
+    }
   }
 
 
@@ -213,8 +214,9 @@ export class TfighterSystem {
     enemy.setScale(1.5)
     enemy.setPosition(x, y);
     enemy.setActive(true);
-    enemy.setVisible(true);
     enemy.setDepth(50);
+    enemy.setVisible(true);
+
     if (enemy.body)
       enemy.body.enable = true;// Activate the physics body
     //enemy.setVelocity(0, 0);
