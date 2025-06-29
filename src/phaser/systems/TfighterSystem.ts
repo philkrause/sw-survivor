@@ -90,7 +90,6 @@ export class TfighterSystem {
    * Prepopulate the enemy pool to avoid runtime allocations
    */
   private prepopulateEnemyPool(): void {
-    const spawnCenter = Phaser.Utils.Array.GetRandom(this.spawnZones);
     // Preallocate enemy objects to avoid allocations during gameplay
     for (let i = 0; i < GAME_CONFIG.TFIGHTER.MAX_COUNT; i++) {
 

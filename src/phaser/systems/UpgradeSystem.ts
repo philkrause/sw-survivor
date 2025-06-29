@@ -24,7 +24,6 @@ export class UpgradeSystem {
   private acquiredUpgrades: Map<string, number> = new Map();
   private fallingTweens: Phaser.Tweens.Tween[] = [];
   private spriteGroup: Phaser.GameObjects.Group; // Group to hold falling sprites
-  private dropTimer: Phaser.Time.TimerEvent | null = null; // Timer for continuous drops
   // Group to hold falling sprites
 
 
