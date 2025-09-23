@@ -26,7 +26,7 @@ export const GAME_CONFIG = {
     SPEED: 50,
     SCALE: 2,
     DEPTH: 5,
-    SPAWN_INTERVAL: 1000, // ms between spawns
+    SPAWN_INTERVAL: 2000, // ms between spawns
     MAX_COUNT: 150,
     SPAWN_PADDING: 20, // Distance from edge
     HITBOX_SCALE: .01,
@@ -57,7 +57,7 @@ export const GAME_CONFIG = {
     SCALE: 1,
     DEPTH: 3,
     TINT: 0x00ffff, // Cyan color
-    VALUE: 10, // Each orb gives 1 XP, player needs 25 for first level up
+    VALUE: 5, // Each orb gives 1 XP, player needs 25 for first level up
     LIFESPAN: 30000, // ms before disappearing
     MAX_COUNT: 300, // Maximum number of orbs
     PULSE_DURATION: 1000, // ms for pulse animation
@@ -69,7 +69,7 @@ export const GAME_CONFIG = {
       SPEED: 500,
       LIFESPAN: 200, // ms
       SCALE: 1,
-      DAMAGE: 30,
+      DAMAGE: 10,
       ROTATEWITHDIRECTION: true,
       MAXSIZE: 20,
       MAX_COUNT: 20,
@@ -80,7 +80,7 @@ export const GAME_CONFIG = {
   FORCE: {
     PLAYER: {
       KEY: 'player_force',
-      BASEDAMAGE: 20,
+      BASEDAMAGE: 10,
       RADIUS: 10,
       ENDRADIUS: 100,
       STRENGTH: 1,
@@ -100,7 +100,7 @@ export const GAME_CONFIG = {
       DURATION: 600,
       SCALE: 3,
       DEPTH: 3,
-      BASEDAMAGE: 25,
+      BASEDAMAGE: 10,
       WIDTH: 50,
       HEIGHT: 50,
       TINT: 100,

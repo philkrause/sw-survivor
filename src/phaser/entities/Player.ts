@@ -390,7 +390,7 @@ export class Player {
     this.scene.add.text(
       cam.scrollX + cam.centerX,
       cam.scrollY + cam.centerY - 25,
-      'game over', {
+      `game over`, {
       fontFamily: 'StarJedi',
       fontSize: '64px',
       color: '#ff0000',
@@ -399,10 +399,21 @@ export class Player {
       align: 'center'
     }).setOrigin(0.5).setDepth(1000);
     
+    this.scene.add.text(
+      cam.scrollX + cam.centerX,
+      cam.scrollY + cam.centerY + 45,
+      `you reached level ${this.level}`, {
+      fontFamily: 'StarJedi',
+      fontSize: '64px',
+      color: '#ff0000',
+      stroke: '#000',
+      strokeThickness: 8,
+      align: 'center'
+    }).setOrigin(0.5).setDepth(1000);
 
     const startButton = this.scene.add.text(
       cam.scrollX + cam.centerX,
-      cam.scrollY + cam.centerY + 45,
+      cam.scrollY + cam.centerY + 115,
       'try again?',
       {
         fontFamily: 'StarJedi',

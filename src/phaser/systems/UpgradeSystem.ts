@@ -112,19 +112,19 @@ export class UpgradeSystem {
       isAvailable: (player) => player.hasForceAbility() // ✅ Evaluated when needed
     });
 
-    this.availableUpgrades.push({
-      id: 'force_radius',
-      name: 'Increase Force Radius',
-      description: "Increase Force Radius by 15%",
-      icon: 'speed_icon',
-      level: 0,
-      maxLevel: 5,
-      apply: (player) => {
-        console.log("The increase force radius function was called")
-        player.increaseForceDamage(0.25);  // Activate the force and set strength
-      },
-      isAvailable: (player) => player.hasForceAbility() // ✅ Evaluated when needed
-    });
+    // this.availableUpgrades.push({
+    //   id: 'force_radius',
+    //   name: 'Increase Force Radius',
+    //   description: "Increase Force Radius by 15%",
+    //   icon: 'speed_icon',
+    //   level: 0,
+    //   maxLevel: 5,
+    //   apply: (player) => {
+    //     console.log("The increase force radius function was called")
+    //     player.increaseForceDamage(1.25);  // Activate the force and set strength
+    //   },
+    //   isAvailable: (player) => player.hasForceAbility() // ✅ Evaluated when needed
+    // });
 
     // // ** R2D2 **
     this.availableUpgrades.push({
@@ -148,7 +148,7 @@ export class UpgradeSystem {
       level: 0,
       maxLevel: 5,
       apply: (player) => {
-        player.increaseR2D2Damage(2);
+        player.increaseR2D2Damage(1.25);
       },
       isAvailable: (player) => player.hasR2D2Ability()
     });
@@ -180,7 +180,7 @@ export class UpgradeSystem {
       level: 0,
       maxLevel: 5,
       apply: (player) => {
-        player.increaseBlasterDamage(.75);
+        player.increaseBlasterDamage(1.25);
       },
       isAvailable: (player) => player.hasBlasterAbility() // ✅ Evaluated when needed
     });

@@ -219,7 +219,9 @@ export class EnemySystem {
     
     type = Phaser.Utils.Array.GetRandom(this.enemyTypes);
     
-    console.log("Spawning enemy of type: " + type);
+    if(GAME_CONFIG.DEBUG) {
+      console.log("Spawning enemy of type: " + type);
+    }
 
     this.spawnZones = this.createSpawnZones()
 
@@ -395,38 +397,16 @@ export class EnemySystem {
           const newElapsed = elapsed + _delta;
           this.offscreenTimers.set(enemy, newElapsed);
 
-          if (newElapsed > 10) {
+          if (newElapsed > 50) {
+            console.log("ENEMY OFF SCREEN AND DEACTIVATING")
             this.deactivateEnemy(enemy);
             this.offscreenTimers.delete(enemy);
             this.activeEnemies.delete(enemy);
-          } else {
+          }
+        } else {
             //if back on screen reset the timer
             this.offscreenTimers.delete(enemy);
           }
-        }
-        
-        // if (type === 'tfighter') {
-        //   const entered = this.hasEnteredScreenMap?.get(enemy) || false;
-        //   const wasVisible = this.previousVisibility.get(enemy) ?? false;
-        //   this.previousVisibility.set(enemy, isVisibleToCamera);
-          
-        //   // Detect transition: off-screen → on-screen
-        //   if (!wasVisible && isVisibleToCamera) {
-        //     console.log("tfighter has entered the screen");
-        //     this.hasEnteredScreenMap.set(enemy, true);
-        //   }
-          
-        //   // Detect transition: on-screen → off-screen AFTER entering
-        //   if (entered && wasVisible && !isVisibleToCamera) {
-        //     console.log("tfighter has exited the screen");
-        //     this.hasEnteredScreenMap.delete(enemy);
-        //     this.deactivateEnemy(enemy);
-        //     this.activeEnemies.delete(enemy);
-        //     this.healthBars.get(enemy)?.setVisible(false);
-        //   }
-      
-        // }
-        
   
       }
     }

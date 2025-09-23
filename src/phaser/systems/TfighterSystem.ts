@@ -186,8 +186,6 @@ export class TfighterSystem {
     let type = "tfighter"; // Default enemy type
 
 
-    type = Phaser.Utils.Array.GetRandom(this.enemyTypes);
-
     const spawnZones = this.createSpawnZones()
 
     // Pick a random spawn position
@@ -582,10 +580,10 @@ export class TfighterSystem {
             this.deactivateEnemy(enemy);
             this.offscreenTimers.delete(enemy);
             this.activeEnemies.delete(enemy);
+          } 
           } else {
             //if back on screen reset the timer
             this.offscreenTimers.delete(enemy);
-          }
         }
         
   

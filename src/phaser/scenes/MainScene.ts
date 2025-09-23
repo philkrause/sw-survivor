@@ -42,6 +42,7 @@ export default class MainScene extends Phaser.Scene {
   // Performance tracking
   private perfText!: Phaser.GameObjects.Text;
   private lastFpsUpdate: number = 0;
+  private music!: Phaser.Sound.BaseSound;
 
   constructor() {
     super({ key: 'MainScene' });
@@ -54,7 +55,8 @@ export default class MainScene extends Phaser.Scene {
     // Initialize asset manager and load assets
     this.assetManager = new AssetManager(this);
     this.assetManager.preloadAssets();
-
+    this.load.audio('game', '../../../assets/audio/game-music.mp3');
+    this.load.audio('swing', '../../../assets/audio/swing.mp3');
   }
 
 
@@ -64,6 +66,13 @@ export default class MainScene extends Phaser.Scene {
    * Create game objects and initialize systems
    */
   create(): void {
+    // stop menu music
+    
+    if (this.music) {
+      this.music.stop();
+    }
+
+
     // Create the game world
     this.assetManager = new AssetManager(this);
     this.assetManager.createWorld();
@@ -93,7 +102,13 @@ export default class MainScene extends Phaser.Scene {
       .setScale(2); // Scale the background for zoom effect
 
 
+    // music
+    this.music = this.sound.add('game', {
+      loop: true,     // makes it loop
+      volume: 0.8     // optional, volume between 0–1
+    });
 
+    this.music.play();
 
     // ****** Instatiate SYSTEMS******   
 
@@ -196,14 +211,14 @@ export default class MainScene extends Phaser.Scene {
     // and only check collisions between visible enemies and player
     console.log("Setting up projectile collisions");
     // Basic physics collisions between enemies for minimal physics interactions
-    this.physics.add.collider(
-      this.enemySystem.getEnemyGroup(),
-      this.enemySystem.getEnemyGroup(),
-      undefined,
+    // this.physics.add.collider(
+    //   this.enemySystem.getEnemyGroup(),
+    //   this.enemySystem.getEnemyGroup(),
+    //   undefined,
       // Only perform collision for visible enemies that are close to each other 
       this.filterEnemyCollisions as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
       this
-    );
+    // );
 
     // Set up projectile-enemy collisions for each projectile type
     const projectileGroup = this.projectileSystem.getProjectileGroup(GAME_CONFIG.BLASTER.PLAYER.KEY);

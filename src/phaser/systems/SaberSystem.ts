@@ -81,6 +81,8 @@ export class SaberSystem {
         const { x, y, facingLeft } = getPlayerData();
         const angle = facingLeft ? Math.PI : 0;
         this.slash(x, y, angle, onHit);
+            // Play sound
+        this.scene.sound.play('swing', { volume: 0.15 });
       }
     });
   }
