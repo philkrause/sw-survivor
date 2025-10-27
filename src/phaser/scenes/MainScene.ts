@@ -55,7 +55,7 @@ export default class MainScene extends Phaser.Scene {
     // Initialize asset manager and load assets
     this.assetManager = new AssetManager(this);
     this.assetManager.preloadAssets();
-    this.load.audio('game', '../../../assets/audio/sw-song1.mp3');
+    this.load.audio('game', '../../../assets/audio/game-music.mp3');
     this.load.audio('swing', '../../../assets/audio/swing.mp3');
   }
 
