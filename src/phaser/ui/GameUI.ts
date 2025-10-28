@@ -14,6 +14,7 @@ export class GameUI {
   private experienceBar: Phaser.GameObjects.Graphics;
   private healthBar: Phaser.GameObjects.Graphics;
   private player: Player;
+  private relicDisplay: Phaser.GameObjects.Container;
 
   constructor(scene: Phaser.Scene, player: Player) {
     this.scene = scene;
@@ -25,6 +26,7 @@ export class GameUI {
     //this.levelText = this.createLevelText();
     this.healthBar = this.createHealthBar();
     this.experienceBar = this.createExperienceBar();
+    this.relicDisplay = this.createRelicDisplay();
     
     // Listen for level up events
     this.scene.events.on('player-level-up', this.onPlayerLevelUp, this);
@@ -74,7 +76,7 @@ export class GameUI {
   private createHealthBar(): Phaser.GameObjects.Graphics {
     const healthBar = this.scene.add.graphics();
     healthBar.setScrollFactor(0); // Fix to camera
-    healthBar.setDepth(1000); // Increase depth to ensure visibility
+    healthBar.setDepth(2000); // Higher depth to stay above pause menu
     return healthBar;
   }
   
@@ -84,8 +86,19 @@ export class GameUI {
   private createExperienceBar(): Phaser.GameObjects.Graphics {
     const experienceBar = this.scene.add.graphics();
     experienceBar.setScrollFactor(0); // Fix to camera
-    experienceBar.setDepth(1000); // Increase depth to ensure visibility
+    experienceBar.setDepth(2000); // Higher depth to stay above pause menu
     return experienceBar;
+  }
+  
+  /**
+   * Create relic display container
+   */
+  private createRelicDisplay(): Phaser.GameObjects.Container {
+    const container = this.scene.add.container(0, 0);
+    container.setScrollFactor(0); // Fix to camera
+    container.setDepth(2000); // Higher depth to stay above pause menu
+    container.setVisible(false); // Start hidden
+    return container;
   }
   
   /**
@@ -228,7 +241,7 @@ export class GameUI {
       fontSize: '12px',
       color: '#ffffff',
       fontStyle: 'bold'
-    }).setOrigin(0.5).setName('exp-text').setScrollFactor(0).setDepth(1000);
+    }).setOrigin(0.5).setName('exp-text').setScrollFactor(0).setDepth(2000);
   }
   
   /**
@@ -262,7 +275,7 @@ export class GameUI {
         ...GAME_CONFIG.UI.TEXT_STYLE,
         fontSize: size
       }
-    ).setOrigin(0.5).setAlpha(1).setColor(color).setDepth(1000);
+    ).setOrigin(0.5).setAlpha(1).setColor(color).setDepth(2000);
     
     // Fade out and destroy after duration
     if(duration > 0) {
@@ -276,6 +289,80 @@ export class GameUI {
         }
       });
     }
+  }
+  
+  /**
+   * Show a relic in the UI
+   */
+  showRelic(relicId: string, relicName: string, relicDescription: string): void {
+    console.log("GameUI.showRelic called:", relicName, relicDescription);
+    
+    // Clear existing relic display
+    this.relicDisplay.removeAll(true);
+    
+    // Position below experience bar
+    const x = 20; // Left side of screen
+    const y = 50; // Below experience bar
+    
+    // Create background
+    const bg = this.scene.add.rectangle(x, y, 200, 60, 0x1d1805, 0.9);
+    bg.setStrokeStyle(2, 0xf0c040);
+    this.relicDisplay.add(bg);
+    
+    // Create relic sprite - map relic ID to sprite frame
+    const relicFrame = this.getRelicFrame(relicId);
+    const relicSprite = this.scene.add.sprite(x - 60, y, 'relics');
+    relicSprite.setFrame(relicFrame);
+    relicSprite.setScale(2);
+    this.relicDisplay.add(relicSprite);
+    
+    // Create relic name text
+    const nameText = this.scene.add.text(x + 20, y - 10, relicName, {
+      fontSize: '16px',
+      color: '#f0c040',
+      fontStyle: 'bold',
+      align: 'left',
+      stroke: '#000000',
+      strokeThickness: 2
+    });
+    nameText.setOrigin(0, 0.5);
+    this.relicDisplay.add(nameText);
+    
+    // Create relic description text
+    const descText = this.scene.add.text(x + 20, y + 10, relicDescription, {
+      fontSize: '12px',
+      color: '#ffffff',
+      align: 'left',
+      stroke: '#000000',
+      strokeThickness: 1
+    });
+    descText.setOrigin(0, 0.5);
+    this.relicDisplay.add(descText);
+    
+    // Show the display
+    this.relicDisplay.setVisible(true);
+    console.log("Relic display set to visible, container children:", this.relicDisplay.list.length);
+    console.log("Relic display position:", this.relicDisplay.x, this.relicDisplay.y);
+  }
+
+  /**
+   * Map relic ID to sprite frame number
+   */
+  private getRelicFrame(relicId: string): number {
+    const relicFrameMap: { [key: string]: number } = {
+      'jedi_robes': 0,
+      'lightsaber_crystal': 1,
+      'force_medallion': 2,
+      'blaster_mod': 3,
+      'r2d2_upgrade': 4,
+      'speed_boosters': 5,
+      'armor_plating': 6,
+      'energy_core': 7,
+      'reflex_enhancer': 8,
+      'shield_generator': 9
+    };
+    
+    return relicFrameMap[relicId] || 0; // Default to frame 0 if not found
   }
   
   /**

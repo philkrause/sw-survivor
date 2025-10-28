@@ -30,15 +30,27 @@ export class Player {
   private projectileSystem: ProjectileSystem | null = null;
   private isFlippedX: boolean = false; // Track if player is flipped horizontally
   public unlockedProjectiles: Set<string> = new Set(); // Track unlocked projectiles
+  private currentAnimationKey: string = 'player_walk_right_no_saber'; // Track current animation
 
   // Upgrade properties
 
   public saberSpeedMultiplier: number = 1.0;
   public saberDamageMultiplier: number = 1.0;
+  public saberCritChance: number = 0; // Crit chance from relics
+
+  // Additional upgrade properties
+  public speedMultiplier: number = 1.0;
+  public experienceMultiplier: number = 1.0;
+  public projectileSpeedMultiplier: number = 1.0;
 
   private hasForceUpgrade: boolean = false;
   private hasR2D2Upgrade: boolean = false;
-  public hasBlasterUpgrade: boolean = false;
+  public hasBlasterUpgrade: boolean = true; // Start with blaster unlocked
+  private hasSaberUpgrade: boolean = false; // Saber starts locked
+  
+  // Relic system
+  private relics: Set<string> = new Set(); // Track collected relics
+  private damageReduction: number = 0; // Track damage reduction from relics
 
 
   public R2D2SpeedMultiplier: number = 1.0;
@@ -69,7 +81,6 @@ export class Player {
 
   // Movement properties
   private baseSpeed: number = GAME_CONFIG.PLAYER.SPEED;
-  private speedMultiplier: number = 1.0;
 
   // Experience properties
   private experience: number = 0;
@@ -81,15 +92,17 @@ export class Player {
     this.scene = scene;
     this.sprite = this.createSprite(x, y);
     this.setupInput();
+    
     // Initialize health
     this.maxHealth = GAME_CONFIG.PLAYER.MAX_HEALTH;
     this.health = this.maxHealth;
     this.projectileSystem = projectileSystem
-    //this.collisionSystem = new CollisionSystem(this.scene);
 
     // Listen for experience collection events
     this.scene.events.on('experience-collected', this.onExperienceCollected, this);
 
+    // Initialize blaster since player starts with it
+    this.initProjectilePool();
   }
 
 
@@ -137,16 +150,17 @@ export class Player {
     const playerPos = this.getPosition();
     const lastDirection = this.lastDirection.clone();
 
+    // If no movement direction recorded, default to facing right
     if (lastDirection.x === 0 && lastDirection.y === 0) {
-      console.warn('Invalid direction, defaulting to (1, 0)');
-      lastDirection.set(1, 1);
+      lastDirection.set(1, 0); // Default to facing right
     }
 
-    const randomAngle = Math.random() * Math.PI * 2; // Random angle between 0 and 2π (0 to 360 degrees)
-    const dirX = Math.cos(randomAngle); // X component of the random direction
-    const dirY = Math.sin(randomAngle); // Y component of the random direction
+    // Use the player's last movement direction for shooting
+    const normalizedDirection = normalizeVector(lastDirection.x, lastDirection.y);
+    const dirX = normalizedDirection.x;
+    const dirY = normalizedDirection.y;
 
-    // Calculate angle for spread shots
+    // Calculate angle for spread shots based on movement direction
     const baseAngle = Math.atan2(dirY, dirX);
     // Fire multiple projectiles if projectileCount > 1
     for (let i = 0; i < this.projectileCount; i++) {
@@ -192,9 +206,18 @@ export class Player {
 
 
   public static setupAnimations(scene: Phaser.Scene) {
+    // Animation for player without saber
     scene.anims.create({
-      key: 'player_walk_right',
-      frames: scene.anims.generateFrameNumbers('player_walk_right', { start: 0, end: 3 }),
+      key: 'player_walk_right_no_saber',
+      frames: scene.anims.generateFrameNumbers('player_walk_right_no_saber', { start: 0, end: 3 }),
+      frameRate: 8,
+      repeat: -1
+    });
+
+    // Animation for player with saber
+    scene.anims.create({
+      key: 'player_walk_right_with_saber',
+      frames: scene.anims.generateFrameNumbers('player_walk_right_with_saber', { start: 0, end: 3 }),
       frameRate: 8,
       repeat: -1
     });
@@ -204,23 +227,27 @@ export class Player {
    * Create and configure the player sprite
    */
   private createSprite(x: number, y: number): Phaser.Physics.Arcade.Sprite {
-    const sprite = this.scene.physics.add.sprite(x, y, 'player');
-
+    const sprite = this.scene.physics.add.sprite(x, y, 'player_walk_right_no_saber');
+    
     sprite.setScale(GAME_CONFIG.PLAYER.SCALE);
     sprite.setDepth(GAME_CONFIG.PLAYER.DEPTH);
-    //sprite.setCollideWorldBounds(true);a
+    sprite.setFrame(0);
 
     // Create a slightly smaller hitbox
     if (sprite.body) {
       const hitboxWidth = sprite.width * GAME_CONFIG.PLAYER.SCALE * GAME_CONFIG.PLAYER.HITBOX_SCALE / 4;
       const hitboxHeight = sprite.height * GAME_CONFIG.PLAYER.SCALE * GAME_CONFIG.PLAYER.HITBOX_SCALE / 1.5;
-
       sprite.body.setSize(hitboxWidth, hitboxHeight);
     }
 
-
     sprite.setDamping(false);
     sprite.setDrag(0);
+
+    // Ensure the sprite has access to the scene's animation manager after all setup
+    if (!sprite.anims) {
+      sprite.anims = this.scene.anims;
+      console.log("Assigned animation manager to sprite");
+    }
 
     return sprite;
   }
@@ -258,7 +285,12 @@ export class Player {
       dirX = -1;
       this.sprite.setFlipX(true);  // Flip sprite to face left
       this.sprite.body?.setOffset(15, 10)
-      this.sprite.anims.play("player_walk_right", true);
+      if (this.sprite.anims && this.sprite.anims.exists(this.currentAnimationKey)) {
+        console.log("Playing animation:", this.currentAnimationKey);
+        this.sprite.anims.play(this.currentAnimationKey, true);
+      } else {
+        console.log("Animation not found:", this.currentAnimationKey, "anims:", this.sprite.anims);
+      }
       this.isFlippedX = true; // Set flipped state
     }
 
@@ -267,19 +299,34 @@ export class Player {
       this.sprite.body?.setOffset(10, 10)
       dirX = 1;
       this.sprite.setFlipX(false);  // Set sprite to face right (default)
-      this.sprite.anims.play("player_walk_right", true);
+      if (this.sprite.anims && this.sprite.anims.exists(this.currentAnimationKey)) {
+        console.log("Playing animation:", this.currentAnimationKey);
+        this.sprite.anims.play(this.currentAnimationKey, true);
+      } else {
+        console.log("Animation not found:", this.currentAnimationKey, "anims:", this.sprite.anims);
+      }
       this.isFlippedX = false; // Reset flipped state
     }
 
     // Handle vertical movement (up and down)
     if (up && !this.dead) {
       dirY = -1;
-      this.sprite.anims.play("player_walk_right", true);
+      if (this.sprite.anims && this.sprite.anims.exists(this.currentAnimationKey)) {
+        console.log("Playing animation:", this.currentAnimationKey);
+        this.sprite.anims.play(this.currentAnimationKey, true);
+      } else {
+        console.log("Animation not found:", this.currentAnimationKey, "anims:", this.sprite.anims);
+      }
     }
 
     if (down && !this.dead) {
       dirY = 1;
-      this.sprite.anims.play("player_walk_right", true);
+      if (this.sprite.anims && this.sprite.anims.exists(this.currentAnimationKey)) {
+        console.log("Playing animation:", this.currentAnimationKey);
+        this.sprite.anims.play(this.currentAnimationKey, true);
+      } else {
+        console.log("Animation not found:", this.currentAnimationKey, "anims:", this.sprite.anims);
+      }
     }
 
 
@@ -324,8 +371,11 @@ export class Player {
       return false;
     }
 
+    // Apply damage reduction from relics
+    const actualDamage = amount * (1 - this.damageReduction);
+
     // Reduce health
-    this.health = Math.max(0, this.health - amount);
+    this.health = Math.max(0, this.health - actualDamage);
 
     // Apply damage visual effect
     this.sprite.setTint(GAME_CONFIG.PLAYER.DAMAGE_TINT);
@@ -664,7 +714,7 @@ onUpgradeSelected(): void {
  */
 increaseBlasterSpeed(multiplier: number): void {
   this.blasterSpeedMultiplier += multiplier;
-  console.log("Blaster attack speed multiplier: " + this.blasterSpeedMultiplier);
+  // Blaster attack speed multiplier
 
   // Update attack timer
   if(this.attackTimer) {
@@ -672,7 +722,7 @@ increaseBlasterSpeed(multiplier: number): void {
 }
 
 const newInterval = this.getBlasterAttackInterval(); // Get the updated interval
-console.log(`Blaster speed increased to ${(1 / newInterval) * 1000} attacks/sec`);
+  // Blaster speed increased
 
 // Recreate the attack timer with the updated interval
 this.attackTimer = this.scene.time.addEvent({
@@ -708,7 +758,7 @@ getForceInterval(): number {
  */
 increaseProjectileCount(amount: number): void {
   this.projectileCount += amount;
-  console.log(`Projectile count increased to ${this.projectileCount}`);
+  // Projectile count increased
 }
 
 /**
@@ -716,7 +766,7 @@ increaseProjectileCount(amount: number): void {
  */
 increaseProjectileSize(multiplier: number): void {
   this.projectileSizeMultiplier += multiplier;
-  console.log(`Projectile size increased to ${this.projectileSizeMultiplier}x`);
+  // Projectile size increased
 }
 
 /**
@@ -726,27 +776,13 @@ getProjectileSizeMultiplier(): number {
   return this.projectileSizeMultiplier;
 }
 
-/**
- * Increase maximum health
- */
-increaseMaxHealth(amount: number): void {
-  this.maxHealth += amount;
-
-  // Also heal the player by the same amount
-  this.health = Math.min(this.health + amount, this.maxHealth);
-
-  // Update UI
-  this.scene.events.emit('player-health-changed', this.health, this.maxHealth);
-
-  console.log(`Max health increased to ${this.maxHealth}`);
-}
 
 /**
  * Increase movement speed
  */
 increaseMovementSpeed(multiplier: number): void {
   this.speedMultiplier += multiplier;
-  console.log(`Movement speed increased to ${this.getSpeed()}`);
+  // Movement speed increased
 }
 
 /**
@@ -798,23 +834,99 @@ getBlasterDamage(): number {
 
 increaseBlasterDamage(multiplier: number): void {
   this.damageBlasterMultiplier += multiplier;
-  console.log(`Blaster damage increased to ${this.getBlasterDamage()}`);
+  // Blaster damage increased
 }
 
 
 unlockR2D2Upgrade() {
   this.hasR2D2Upgrade = true;
-  console.log("R2D2 upgrade unlocked");
+  // R2D2 upgrade unlocked
 }
 
 hasR2D2Ability(): boolean {
   return this.hasR2D2Upgrade;
 }
 
+unlockSaberUpgrade(): void {
+  this.hasSaberUpgrade = true;
+  this.switchToSaberAnimation();
+  // Saber upgrade unlocked
+}
+
+/**
+ * Switch to saber animation
+ */
+private switchToSaberAnimation(): void {
+  this.currentAnimationKey = 'player_walk_right_with_saber';
+  // If currently moving, immediately switch to the new animation
+  if (this.sprite.anims && this.sprite.anims.isPlaying && this.sprite.anims.exists(this.currentAnimationKey)) {
+    this.sprite.anims.play(this.currentAnimationKey, true);
+  }
+}
+
+hasSaberAbility(): boolean {
+  return this.hasSaberUpgrade;
+}
+
+/**
+ * Add a relic to the player's collection
+ */
+addRelic(relicId: string): void {
+  this.relics.add(relicId);
+  this.applyRelicEffect(relicId);
+  // Relic collected
+}
+
+/**
+ * Check if player has a specific relic
+ */
+hasRelic(relicId: string): boolean {
+  return this.relics.has(relicId);
+}
+
+/**
+ * Apply the effect of a specific relic
+ */
+private applyRelicEffect(relicId: string): void {
+  switch (relicId) {
+    case 'kyber_crystal':
+      // Increase all weapon damage by 25%
+      this.damageBlasterMultiplier *= 1.25;
+      this.saberDamageMultiplier *= 1.25;
+      this.forceDamageMultiplier *= 1.25;
+      this.R2D2DamageMultiplier *= 1.25;
+      break;
+      
+    case 'jedi_robes':
+      // Reduce damage taken by 20%
+      this.damageReduction += 0.2;
+      // Damage reduction increased
+      break;
+      
+    case 'force_sensitivity':
+      // Increase Force abilities by 50%
+      this.forceDamageMultiplier *= 1.5;
+      this.forceSpeedMultiplier *= 1.5;
+      break;
+      
+    case 'droid_companion':
+      // R2-D2 abilities 30% more effective
+      this.R2D2DamageMultiplier *= 1.3;
+      this.R2D2SpeedMultiplier *= 1.3;
+      break;
+      
+    case 'lightsaber_crystal':
+      // Saber attacks have 15% chance to crit
+      this.saberCritChance += 0.15;
+      // Saber crit chance increased
+      break;
+  }
+}
+
 increaseR2D2Damage(multiplier: number): void {
   this.hasR2D2Upgrade = true;
   this.R2D2DamageMultiplier += multiplier;
-  console.log("Increased R2D2 damage: " + this.R2D2DamageMultiplier); // Add debug here
+  // Increased R2D2 damage
 }
 
 // Get the multiplier for force strength
@@ -826,12 +938,22 @@ getR2D2StrengthMultiplier(): number {
 increaseForceDamage(multiplier: number): void {
   this.hasForceUpgrade = true;
   this.forceDamageMultiplier += multiplier;
-  console.log("Increased force damage: " + this.forceDamageMultiplier); // Add debug here
+  // Increased force damage
+}
+
+increaseDamageReduction(multiplier: number): void {
+  this.damageReduction += multiplier;
+  // Increased damage reduction
+}
+
+increaseSaberCritChance(multiplier: number): void {
+  this.saberCritChance += multiplier;
+  // Increased saber crit chance
 }
 
 increaseForceSpeed(multiplier: number): void {
   this.forceSpeedMultiplier *= multiplier;
-  console.log("Increased force speed: " + this.forceSpeedMultiplier); // Add debug here
+  // Increased force speed
 }
 
 // Get the multiplier for force strength
@@ -843,12 +965,12 @@ getForceStrengthMultiplier(): number {
 //UPGRADEs
 increaseSaberDamage(multiplier: number): void {
   this.saberDamageMultiplier += multiplier;
-  console.log("Increased saber damage: " + this.saberDamageMultiplier); // Add debug here
+  // Increased saber damage
 }
 
 increaseSaberSpeed(multiplier: number): void {
   this.saberSpeedMultiplier *= multiplier;
-  console.log("Increased saber speed: " + this.saberSpeedMultiplier); // Add debug here
+  // Increased saber speed
 }
 
 deathVisual(): void {
@@ -903,33 +1025,59 @@ update(): void {
 
   // Skip update if player is in level-up state
   if(this.isLevelingUp) {
-  this.sprite.setVelocity(0, 0);
-  return;
-}
+    this.sprite.setVelocity(0, 0);
+    return;
+  }
 
-const direction = this.getInputDirection();
-if (direction.x !== 0 || direction.y !== 0) {
-  this.lastDirection.copy(direction);
-}
+  const direction = this.getInputDirection();
+  if (direction.x !== 0 || direction.y !== 0) {
+    this.lastDirection.copy(direction);
+  }
 
-if (direction.x !== 0 || direction.y !== 0) {
-  // Normalize for diagonal movement
-  const normalized = normalizeVector(direction.x, direction.y);
+  if (direction.x !== 0 || direction.y !== 0) {
+    // Normalize for diagonal movement
+    const normalized = normalizeVector(direction.x, direction.y);
 
-  // Apply movement with speed multiplier
-  this.sprite.setVelocity(
-    normalized.x * this.getSpeed(),
-    normalized.y * this.getSpeed()
-  );
-} else {
-  // No input, stop movement
-  this.sprite.setVelocity(0, 0);
-}
+    // Apply movement with speed multiplier
+    this.sprite.setVelocity(
+      normalized.x * this.getSpeed(),
+      normalized.y * this.getSpeed()
+    );
+  } else {
+    // No input, stop movement
+    this.sprite.setVelocity(0, 0);
+  }
 
 
   }
 
+  /**
+   * Increase movement speed
+   */
+  increaseSpeed(multiplier: number): void {
+    this.speedMultiplier += multiplier;
+  }
 
+  /**
+   * Increase max health
+   */
+  increaseMaxHealth(amount: number): void {
+    this.maxHealth += amount;
+    this.health = Math.min(this.health + amount, this.maxHealth); // Also heal by the same amount
+  }
 
+  /**
+   * Increase experience gain multiplier
+   */
+  increaseExperienceGain(multiplier: number): void {
+    this.experienceMultiplier += multiplier;
+  }
+
+  /**
+   * Increase projectile speed multiplier
+   */
+  increaseProjectileSpeed(multiplier: number): void {
+    this.projectileSpeedMultiplier += multiplier;
+  }
 
 } 

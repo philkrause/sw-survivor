@@ -9,12 +9,14 @@ import { ForceSystem } from '../systems/ForceSystem';
 import { TfighterSystem } from '../systems/TfighterSystem';
 
 import { R2D2System } from '../systems/R2D2System';
-
+import { RelicSystem } from '../systems/RelicSystem';
 
 import { ExperienceSystem } from '../systems/ExperienceSystem';
 import { UpgradeSystem } from '../systems/UpgradeSystem';
 import { UpgradeUI } from '../ui/UpgradeUI';
+import { PauseMenu } from '../ui/PauseMenu';
 import { GAME_CONFIG } from '../config/GameConfig';
+import StartScene from './StartScene';
 
 /**
  * Main game scene that coordinates all game systems and entities
@@ -30,11 +32,13 @@ export default class MainScene extends Phaser.Scene {
   private saberSystem!: SaberSystem;
   private escapeKey!: Phaser.Input.Keyboard.Key;
   private R2D2System!: R2D2System;
+  private relicSystem!: RelicSystem;
 
   private experienceSystem!: ExperienceSystem;
   private upgradeSystem!: UpgradeSystem;
   private gameUI!: GameUI;
   private upgradeUI!: UpgradeUI;
+  private pauseMenu!: PauseMenu;
   private background!: Phaser.GameObjects.TileSprite;
   // Game state
   private isPaused: boolean = false;
@@ -126,9 +130,8 @@ export default class MainScene extends Phaser.Scene {
 
     this.saberSystem = new SaberSystem(this, this.enemySystem, this.tfighterSystem, this.player );
     
-    //this.setupProjectileCollisions();
-
-    this.events.on('projectile-pool-initialized', this.setupProjectileCollisions, this);
+    // Setup projectile collisions immediately after systems are created
+    this.setupProjectileCollisions();
 
 
 
@@ -143,16 +146,7 @@ export default class MainScene extends Phaser.Scene {
     Player.setupAnimations(this);
     EnemySystem.setupEnemyAnimations(this);
     
-    //setup saber attacks
-    this.saberSystem.startAutoSlash(() => {
-      const playerBody = this.player.getSprite();
-
-      return {
-        x: playerBody.x,
-        y: playerBody.y,
-        facingLeft: playerBody.flipX
-      };
-    });
+    //setup saber attacks - only start if player has saber ability
     this.events.on('upgrade-saber', () => {
       const playerBody = this.player.getSprite();
 
@@ -182,8 +176,18 @@ export default class MainScene extends Phaser.Scene {
     // Create game UI
     this.gameUI = new GameUI(this, this.player);
 
+    // Create relic system (needs GameUI reference)
+    // this.relicSystem = new RelicSystem(this, this.player, this.gameUI);
+
     // Create upgrade UI
     this.upgradeUI = new UpgradeUI(this, this.upgradeSystem);
+
+    // Initialize pause menu
+    this.pauseMenu = new PauseMenu(this, {
+      onResume: () => this.resumeGame(),
+      onVolumeChange: (volume: number) => this.setMusicVolume(volume),
+      onQuit: () => this.quitToMenu()
+    });
 
     // Listen for upgrade UI events
     this.events.on('show-upgrade-ui', this.showUpgradeUI, this);
@@ -210,32 +214,29 @@ export default class MainScene extends Phaser.Scene {
     // We'll use overlap instead of collider for better control
     // and only check collisions between visible enemies and player
     console.log("Setting up projectile collisions");
-    // Basic physics collisions between enemies for minimal physics interactions
-    // this.physics.add.collider(
-    //   this.enemySystem.getEnemyGroup(),
-    //   this.enemySystem.getEnemyGroup(),
-    //   undefined,
-      // Only perform collision for visible enemies that are close to each other 
-      this.filterEnemyCollisions as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
-      this
-    // );
-
+    
     // Set up projectile-enemy collisions for each projectile type
     const projectileGroup = this.projectileSystem.getProjectileGroup(GAME_CONFIG.BLASTER.PLAYER.KEY);
 
     if (projectileGroup) {
-      console.log(  "Setting up projectile-enemy collisions for blaster projectiles");
+      console.log("Setting up projectile-enemy collisions for blaster projectiles");
+      console.log("Projectile group size:", projectileGroup.getLength());
+      console.log("Enemy group size:", this.enemySystem.getEnemyGroup().getLength());
+      
       this.physics.add.overlap(
         projectileGroup,
         this.enemySystem.getEnemyGroup(),
         this.handleProjectileEnemyCollision as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
         // Only check collisions for active projectiles and enemies
         (projectile, enemy) => {
-          return (projectile as Phaser.Physics.Arcade.Sprite).active &&
-            (enemy as Phaser.Physics.Arcade.Sprite).active;
+          const pActive = (projectile as Phaser.Physics.Arcade.Sprite).active;
+          const eActive = (enemy as Phaser.Physics.Arcade.Sprite).active;
+          return pActive && eActive;
         },
         this
       );  
+    } else {
+      console.error("Projectile group not found!");
     }
 
     if (projectileGroup) {
@@ -264,6 +265,7 @@ export default class MainScene extends Phaser.Scene {
     const p = projectile as Phaser.Physics.Arcade.Sprite;
     const e = enemy as Phaser.Physics.Arcade.Sprite;
 
+
     const damage: number = p.getData('damage');
     const isCritical: boolean = p.getData('critical') ?? false;
     this.enemySystem.damageEnemy(e, damage, 0, isCritical);
@@ -286,37 +288,6 @@ export default class MainScene extends Phaser.Scene {
   }
 
 
-  /**
-   * Custom filter to optimize enemy-enemy collisions
-   * Only performs collision checks when necessary
-   */
-
-  private filterEnemyCollisions(
-    obj1: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody | Phaser.Tilemaps.Tile,
-    obj2: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody | Phaser.Tilemaps.Tile
-  ): boolean {
-    const e1 = obj1 as Phaser.Physics.Arcade.Sprite;
-    const e2 = obj2 as Phaser.Physics.Arcade.Sprite;
-  
-    // Skip inactive enemies
-    if (!e1.active || !e2.active) return false;
-  
-    const type1 = (e1 as any).enemyType;
-    const type2 = (e2 as any).enemyType;
-
-    // Skip collisions involving tfighters
-    if (type1 === 'tfighter' || type2 === 'tfighter') return false;
-
-
-  
-    // Distance-based optimization
-    const dx = e1.x - e2.x;
-    const dy = e1.y - e2.y;
-    const distSquared = dx * dx + dy * dy;
-  
-    const collisionThreshold = 32; // Adjust as needed
-    return distSquared < (collisionThreshold * collisionThreshold);
-  }
   
   /**
    * Check for collisions between player and enemies
@@ -358,8 +329,8 @@ export default class MainScene extends Phaser.Scene {
    * Show the upgrade UI and pause the game
    */
   private showUpgradeUI(): void {
-    // Pause the game
-    this.pauseGame();
+    // Pause the game without showing pause menu
+    this.pauseGameWithoutMenu();
 
     this.upgradeSystem.dropFallingSprites(this, "byoda", 300)
     
@@ -390,6 +361,19 @@ export default class MainScene extends Phaser.Scene {
 
     // Pause all timers
     this.time.paused = true;
+
+    // Show pause menu
+    this.pauseMenu.show();
+  }
+
+  private pauseGameWithoutMenu(): void {
+    this.isPaused = true;
+
+    // Pause physics
+    this.physics.pause();
+
+    // Pause all timers
+    this.time.paused = true;
   }
 
   /**
@@ -403,9 +387,31 @@ export default class MainScene extends Phaser.Scene {
 
     // Resume all timers
     this.time.paused = false;
+
+    // Hide pause menu
+    this.pauseMenu.hide();
   }
 
+  /**
+   * Set music volume
+   */
+  private setMusicVolume(volume: number): void {
+    if (this.music) {
+      (this.music as Phaser.Sound.WebAudioSound).setVolume(volume);
+    }
+    // Store volume for future music
+    this.sound.volume = volume;
+  }
 
+  /**
+   * Quit to main menu
+   */
+  private quitToMenu(): void {
+    this.pauseMenu.hide();
+    this.scene.stop('MainScene');
+    this.scene.remove('StartScene');
+    this.scene.add('StartScene', StartScene, true);
+  }
 
   /**as
    * Main update loop
@@ -525,5 +531,15 @@ export default class MainScene extends Phaser.Scene {
     this.enemySystem.updateSpawnRate();
     this.tfighterSystem.updateSpawnRate();
     console.log(`Player reached level ${level}! Adjusting enemy spawn rate.`);
+  }
+
+  destroy(): void {
+    // Clean up event listeners
+    this.events.off('show-upgrade-ui', this.showUpgradeUI, this);
+    
+    // Clean up pause menu
+    if (this.pauseMenu) {
+      this.pauseMenu.cleanup();
+    }
   }
 } 

@@ -56,12 +56,19 @@ export class ProjectileSystem {
 
       // Make sure projectile is not null before configuring
       if (projectile) {
-        //this.configureProjectile(projectile, config);
         projectile.setActive(false);
         projectile.setVisible(false);
+        projectile.setScale(config.scale);
+        projectile.setDepth(config.depth);
 
-        if (projectile.body)
-          projectile.body.enable = false; // Disable physics body
+        if (config.tint !== undefined) {
+          projectile.setTint(config.tint);
+        }
+
+        if (projectile.body) {
+          projectile.body.enable = false; // Disable physics body initially
+          projectile.body.setSize(projectile.width, projectile.height); // Set proper body size
+        }
 
         // Store lifespan data in a custom property
         (projectile as any).lifespan = config.lifespan;
@@ -113,13 +120,21 @@ export class ProjectileSystem {
 
     // Reset and configure the projectile
     projectile.setActive(true).setVisible(true);
+    projectile.setPosition(x, y); // Set position
+    projectile.setTexture(config.key); // Ensure the correct texture is applied
+    projectile.setScale(config.scale);
+    projectile.setDepth(config.depth);
+    
+    // Apply tint if specified
+    if (config.tint !== undefined) {
+      projectile.setTint(config.tint);
+    }
+    
     if (projectile.body) {
       projectile.body.enable = true; // Enable physics body
       projectile.setVelocity(0, 0); // Reset velocity
+      projectile.body.setSize(projectile.width, projectile.height); // Ensure proper body size
     }
-
-    projectile.setPosition(x, y); // Set position
-    projectile.setTexture(config.key); // Ensure the correct texture is applied
 
     // Set velocity based on direction
     const dir = this.vectorBuffer.set(dirX, dirY).normalize();

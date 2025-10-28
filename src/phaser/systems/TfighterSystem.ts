@@ -37,11 +37,13 @@ export class TfighterSystem {
     // Initialize enemy group with preallocated pool
     this.enemies = this.createEnemyGroup();
 
-    // create collisions between enemies
-    this.scene.physics.add.collider(this.enemies, this.enemies);
+    // T-fighters don't collide with each other (removed collision)
 
     // Pre-populate the object pool to avoid runtime allocations
     this.prepopulateEnemyPool();
+
+    // Ensure all enemies are properly deactivated initially
+    this.deactivateAllEnemies();
 
     // Set up spawn timer
     this.spawnTimer = this.startSpawnTimer();
@@ -182,8 +184,12 @@ export class TfighterSystem {
       return;
     }
 
-    let type = "tfighter"; // Default enemy type
+    // Don't spawn T-fighters until player reaches level 2
+    if (this.player.getLevel() <= 1) {
+      return;
+    }
 
+    let type = "tfighter"; // Default enemy type
 
     const spawnZones = this.createSpawnZones()
 
@@ -191,10 +197,9 @@ export class TfighterSystem {
     const { x, y } = Phaser.Utils.Array.GetRandom(spawnZones);
 
     // Get an inactive enemy from the pool
-    const enemy = this.enemies.get(x, y, type) as Phaser.Physics.Arcade.Sprite;
+    const enemy = this.enemies.get() as Phaser.Physics.Arcade.Sprite;
 
-
-    if (enemy && this.player. getLevel() > 1) {
+    if (enemy) {
       this.activateEnemy(enemy, x, y, type);
     }
   }
@@ -258,6 +263,17 @@ export class TfighterSystem {
     }
 
     this.activeEnemies.delete(enemy);
+  }
+
+  /**
+   * Deactivate all enemies in the pool
+   */
+  private deactivateAllEnemies(): void {
+    const enemies = this.enemies.getChildren();
+    for (let i = 0; i < enemies.length; i++) {
+      const enemy = enemies[i] as Phaser.Physics.Arcade.Sprite;
+      this.deactivateEnemy(enemy);
+    }
   }
 
   /**
@@ -377,6 +393,7 @@ export class TfighterSystem {
     if ((enemy as any).health <= 0) {
       this.showDamageNumber(this.scene, enemy.x, enemy.y - 10, damage, isCritical);
       this.dropExperienceOrb(enemy);
+      this.dropRelic(enemy);
       this.deactivateEnemy(enemy);
 
       return true;
@@ -429,6 +446,17 @@ export class TfighterSystem {
     // Add a small visual effect
     this.createDeathEffect(enemy.x, enemy.y);
 
+  }
+
+  /**
+   * Drop a relic at the enemy's position (higher chance for T-fighters)
+   */
+  public dropRelic(enemy: Phaser.Physics.Arcade.Sprite): void {
+    // 8% chance to drop a relic from T-fighters (higher than regular enemies)
+    if (Math.random() < 0.08) {
+      console.log("T-fighter dropping relic at:", enemy.x, enemy.y);
+      this.scene.events.emit('relic-dropped', enemy.x, enemy.y);
+    }
   }
 
   /**

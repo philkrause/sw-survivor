@@ -178,7 +178,7 @@ export class SaberSystem {
   private calculateSlashDamage(config: SaberSlashConfig): { damage: number; isCritical: boolean } {
     const base = config.basedamage;
     const damageMultiplier = this.player.saberDamageMultiplier;
-    const critChance = 0.2;
+    const critChance = 0.2 + this.player.saberCritChance; // Base 20% + relic bonus
     const critMultiplier = 1.5;
 
     let damage = (base) * damageMultiplier;

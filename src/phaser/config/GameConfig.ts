@@ -67,13 +67,13 @@ export const GAME_CONFIG = {
     PLAYER: {
       KEY: 'blaster',
       SPEED: 500,
-      LIFESPAN: 200, // ms
+      LIFESPAN: 2000, // ms - increased lifespan
       SCALE: 1,
       DAMAGE: 10,
       ROTATEWITHDIRECTION: true,
-      MAXSIZE: 20,
-      MAX_COUNT: 20,
-      TINT: 0xffff, // cyan color
+      MAXSIZE: 50, // increased pool size
+      MAX_COUNT: 50, // increased pool size
+      TINT: 0xff0000, // red color
       DEPTH: 3,
     },
   },

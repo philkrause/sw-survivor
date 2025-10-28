@@ -504,6 +504,7 @@ export class EnemySystem {
     if ((enemy as any).health <= 0) {
       this.showDamageNumber(this.scene, enemy.x, enemy.y - 10, damage, isCritical);
       this.dropExperienceOrb(enemy);
+      this.dropRelic(enemy);
       this.deactivateEnemy(enemy);
 
       return true;
@@ -563,6 +564,17 @@ export class EnemySystem {
     // Add a small visual effect
     this.createDeathEffect(enemy.x, enemy.y);
 
+  }
+
+  /**
+   * Drop a relic at the enemy's position (rare chance)
+   */
+  public dropRelic(enemy: Phaser.Physics.Arcade.Sprite): void {
+    // 3% chance to drop a relic from regular enemies
+    if (Math.random() < 0.3) {
+      console.log("Regular enemy dropping relic at:", enemy.x, enemy.y);
+      this.scene.events.emit('relic-dropped', enemy.x, enemy.y);
+    }
   }
 
   /**

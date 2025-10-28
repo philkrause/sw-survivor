@@ -1,9 +1,12 @@
 import Phaser from 'phaser';
 import MainScene from './MainScene';
+import { OptionsMenu } from '../ui/OptionsMenu';
 
 
 export default class StartScene extends Phaser.Scene {
   private music!: Phaser.Sound.BaseSound;
+  private optionsMenu!: OptionsMenu;
+  private isShowingOptions: boolean = false;
 
   constructor() {
     super({ key: 'StartScene' });
@@ -22,6 +25,12 @@ export default class StartScene extends Phaser.Scene {
     if (this.music) {
       this.music.stop();
     }
+
+    // Initialize options menu
+    this.optionsMenu = new OptionsMenu(this, {
+      onVolumeChange: (volume: number) => this.setMusicVolume(volume),
+      onClose: () => this.closeOptions()
+    });
 
     console.log('🎬 create StartScene');
 
@@ -74,41 +83,69 @@ export default class StartScene extends Phaser.Scene {
         align: 'center'
       }).setOrigin(0.5).setDepth(2).setInteractive({ useHandCursor: true });
 
-      // const optionsButton = this.add.text(this.scale.width / 2, 600, 'options', {
-      //   fontFamily: 'StarJedi',
-      //   fontSize: '64px',
-      //   color: '#ffff00',
-      //   stroke: '#000',
-      //   strokeThickness: 8,
-      //   align: 'center'
-      // }).setOrigin(0.5).setDepth(2).setInteractive({ useHandCursor: true });
+      // Options Button
+      const optionsButton = this.add.text(this.scale.width / 2, 600, 'options', {
+        fontFamily: 'StarJedi',
+        fontSize: '64px',
+        color: '#ffff00',
+        stroke: '#000',
+        strokeThickness: 8,
+        align: 'center'
+      }).setOrigin(0.5).setDepth(2).setInteractive({ useHandCursor: true });
 
 
       startButton.on('pointerdown', () => {
         this.scene.stop('StartScene');
         this.scene.remove('MainScene');
         this.scene.add('MainScene', MainScene, true); // auto-start it
-
       });
 
-      // optionsButton.on('pointerdown', () => {
-      //   this.scene.stop('StartScene');
-      //   this.scene.remove('MainScene');
-      //   this.scene.add('MainScene', MainScene, true); // auto-start it
+      optionsButton.on('pointerdown', () => {
+        this.showOptions();
+      });
 
-      // });
-
-
-
-      // Hover effect
+      // Hover effects
       startButton.on('pointerover', () => startButton.setStyle({ backgroundColor: '#444' }));
       startButton.on('pointerout', () => startButton.setStyle({ backgroundColor: '' }));
-      //optionsButton.on('pointerover', () => optionsButton.setStyle({ backgroundColor: '#444' }));
-      //optionsButton.on('pointerout', () => optionsButton.setStyle({ backgroundColor: '' }));
+      optionsButton.on('pointerover', () => optionsButton.setStyle({ backgroundColor: '#444' }));
+      optionsButton.on('pointerout', () => optionsButton.setStyle({ backgroundColor: '' }));
     });
 
   }
 
+  /**
+   * Show options menu
+   */
+  private showOptions(): void {
+    this.isShowingOptions = true;
+    this.optionsMenu.show();
+  }
 
+  /**
+   * Close options menu
+   */
+  private closeOptions(): void {
+    this.isShowingOptions = false;
+    this.optionsMenu.hide();
+  }
 
+  /**
+   * Set music volume
+   */
+  private setMusicVolume(volume: number): void {
+    if (this.music) {
+      (this.music as Phaser.Sound.WebAudioSound).setVolume(volume);
+    }
+    // Store volume for future music
+    this.sound.volume = volume;
+  }
+
+  /**
+   * Cleanup when scene is destroyed
+   */
+  destroy(): void {
+    if (this.optionsMenu) {
+      this.optionsMenu.cleanup();
+    }
+  }
 }

@@ -12,6 +12,7 @@ export interface Upgrade {
   maxLevel: number;
   apply: (player: Player) => void;
   isAvailable?: (player: Player) => boolean;
+  isRelic?: boolean; // Marks this as a relic upgrade
 }
 
 /**
@@ -55,7 +56,7 @@ export class UpgradeSystem {
         player.increaseSaberSpeed(0.9);
         this.scene.events.emit('upgrade-saber');
       },
-      isAvailable: () => true
+      isAvailable: (player) => player.hasSaberAbility()
     });
 
     this.availableUpgrades.push({
@@ -69,10 +70,25 @@ export class UpgradeSystem {
         console.log("The increase saber damage function was called")
         player.increaseSaberDamage(0.25);  // Activate the saber and set strength
       },
-      isAvailable: () => true // ✅ Evaluated when needed
+      isAvailable: (player) => player.hasSaberAbility()
     });
 
-    // ** THE FORCE **
+    // ** SABER UNLOCK **
+    this.availableUpgrades.push({
+      id: 'unlock_saber',
+      name: 'Unlock Lightsaber',
+      description: "Unlock the legendary lightsaber weapon.",
+      icon: 'saber_icon',
+      level: 0,
+      maxLevel: 1,
+      apply: (player) => {
+        player.unlockSaberUpgrade();
+        this.scene.events.emit('upgrade-saber');
+      },
+      isAvailable: (player) => player.getLevel() >= 8 // Unlock at level 8
+    });
+
+    // ** THE FORCE UNLOCK **
     this.availableUpgrades.push({
       id: 'unlock_force',
       name: 'Unlock The Force',
@@ -82,7 +98,8 @@ export class UpgradeSystem {
       maxLevel: 1,
       apply: (player) => {
         player.unlockForceUpgrade();
-      }
+      },
+      isAvailable: (player) => player.getLevel() >= 5 // Unlock at level 5
     });
     // // Add attack speed upgrade
     this.availableUpgrades.push({
@@ -126,7 +143,7 @@ export class UpgradeSystem {
     //   isAvailable: (player) => player.hasForceAbility() // ✅ Evaluated when needed
     // });
 
-    // // ** R2D2 **
+    // ** R2D2 UNLOCK **
     this.availableUpgrades.push({
       id: 'r2d2_droid',
       name: 'Deploy R2-D2 Droid',
@@ -137,7 +154,7 @@ export class UpgradeSystem {
       apply: (player) => {
         player.unlockR2D2Upgrade();
       },
-      isAvailable: () => true,
+      isAvailable: (player) => player.getLevel() >= 2, // Unlock at level 2
     });
 
     this.availableUpgrades.push({
@@ -156,22 +173,6 @@ export class UpgradeSystem {
 
 
     // ** BLASTER **
-    this.availableUpgrades.push({
-      id: 'unlock_blaster',
-      name: 'Unlock The Blaster',
-      description: "Shoot A Laser Pistol.",
-      icon: 'blaster_unlock_icon',
-      level: 0,
-      maxLevel: 1,
-      apply: (player) => {
-        //setup projectile config
-        player.initProjectilePool();
-        player.unlockBlasterUpgrade();
-        player.unlockProjectile("blaster")
-      },
-      isAvailable: () => true
-    });
-
     this.availableUpgrades.push({
       id: 'damage',
       name: 'Increased Blaster Damage',
@@ -240,6 +241,148 @@ export class UpgradeSystem {
         player.increaseMovementSpeed(0.1);
       },
       isAvailable: () => true // ✅ Evaluated when needed
+    });
+
+    // RELIC UPGRADES - These are special items that drop from enemies
+    this.availableUpgrades.push({
+      id: 'jedi_robes',
+      name: 'Jedi Robes',
+      description: 'Ancient robes that reduce incoming damage by 15%',
+      icon: 'jedi_robes_icon',
+      level: 0,
+      maxLevel: 1,
+      apply: (player) => {
+        player.increaseDamageReduction(0.15);
+      },
+      isAvailable: () => true,
+      isRelic: true
+    });
+
+    this.availableUpgrades.push({
+      id: 'lightsaber_crystal',
+      name: 'Lightsaber Crystal',
+      description: 'A rare crystal that increases saber critical hit chance by 20%',
+      icon: 'crystal_icon',
+      level: 0,
+      maxLevel: 1,
+      apply: (player) => {
+        player.increaseSaberCritChance(0.20);
+      },
+      isAvailable: (player) => player.hasSaberAbility(),
+      isRelic: true
+    });
+
+    this.availableUpgrades.push({
+      id: 'force_medallion',
+      name: 'Force Medallion',
+      description: 'A medallion that increases force damage by 25%',
+      icon: 'medallion_icon',
+      level: 0,
+      maxLevel: 1,
+      apply: (player) => {
+        player.increaseForceDamage(0.25);
+      },
+      isAvailable: (player) => player.hasForceAbility(),
+      isRelic: true
+    });
+
+    this.availableUpgrades.push({
+      id: 'blaster_mod',
+      name: 'Blaster Modification',
+      description: 'A modification that increases blaster damage by 20%',
+      icon: 'blaster_mod_icon',
+      level: 0,
+      maxLevel: 1,
+      apply: (player) => {
+        player.increaseBlasterDamage(0.20);
+      },
+      isAvailable: (player) => player.hasBlasterAbility(),
+      isRelic: true
+    });
+
+    this.availableUpgrades.push({
+      id: 'r2d2_upgrade',
+      name: 'R2-D2 Enhancement',
+      description: 'An enhancement that increases R2-D2 damage by 30%',
+      icon: 'r2d2_upgrade_icon',
+      level: 0,
+      maxLevel: 1,
+      apply: (player) => {
+        player.increaseR2D2Damage(0.30);
+      },
+      isAvailable: (player) => player.hasR2D2Ability(),
+      isRelic: true
+    });
+
+    // Add more creative relics focused on speed, defense, and other stats
+    this.availableUpgrades.push({
+      id: 'speed_boosters',
+      name: 'Speed Boosters',
+      description: 'Jet boots that increase movement speed by 25%',
+      icon: 'speed_boosters_icon',
+      level: 0,
+      maxLevel: 1,
+      apply: (player) => {
+        player.increaseSpeed(0.25);
+      },
+      isAvailable: () => true,
+      isRelic: true
+    });
+
+    this.availableUpgrades.push({
+      id: 'armor_plating',
+      name: 'Armor Plating',
+      description: 'Heavy armor that increases max health by 50',
+      icon: 'armor_plating_icon',
+      level: 0,
+      maxLevel: 1,
+      apply: (player) => {
+        player.increaseMaxHealth(50);
+      },
+      isAvailable: () => true,
+      isRelic: true
+    });
+
+    this.availableUpgrades.push({
+      id: 'energy_core',
+      name: 'Energy Core',
+      description: 'A power core that increases experience gain by 30%',
+      icon: 'energy_core_icon',
+      level: 0,
+      maxLevel: 1,
+      apply: (player) => {
+        player.increaseExperienceGain(0.30);
+      },
+      isAvailable: () => true,
+      isRelic: true
+    });
+
+    this.availableUpgrades.push({
+      id: 'reflex_enhancer',
+      name: 'Reflex Enhancer',
+      description: 'A neural implant that increases projectile speed by 40%',
+      icon: 'reflex_enhancer_icon',
+      level: 0,
+      maxLevel: 1,
+      apply: (player) => {
+        player.increaseProjectileSpeed(0.40);
+      },
+      isAvailable: (player) => player.hasBlasterAbility(),
+      isRelic: true
+    });
+
+    this.availableUpgrades.push({
+      id: 'shield_generator',
+      name: 'Shield Generator',
+      description: 'A personal shield that reduces damage by 20%',
+      icon: 'shield_generator_icon',
+      level: 0,
+      maxLevel: 1,
+      apply: (player) => {
+        player.increaseDamageReduction(0.20);
+      },
+      isAvailable: () => true,
+      isRelic: true
     });
   }
 
@@ -377,5 +520,17 @@ export class UpgradeSystem {
     console.log('All falling sprites stopped.');
   }
 
+  /**
+   * Get all available upgrades (for RelicSystem)
+   */
+  getAllUpgrades(): Upgrade[] {
+    return this.availableUpgrades;
+  }
 
+  /**
+   * Get upgrade by ID (for RelicSystem)
+   */
+  getUpgradeById(id: string): Upgrade | undefined {
+    return this.availableUpgrades.find(upgrade => upgrade.id === id);
+  }
 } 

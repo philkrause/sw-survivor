@@ -18,9 +18,15 @@ export class AssetManager {
 
 
     // ********** PLAYER **********
-    this.scene.load.image('player', 'assets/images/game/luke.png');
+    this.scene.load.image('player', 'assets/images/game/luke1_start_blaster2.png');
 
-    this.scene.load.spritesheet('player_walk_right', 'assets/images/game/luke1_walk_right_trim.png', {
+    // Load both player spritesheets
+    this.scene.load.spritesheet('player_walk_right_no_saber', 'assets/images/game/luke1_walk_right_blaster2.png', {
+      frameWidth: 36,
+      frameHeight: 34
+    });
+
+    this.scene.load.spritesheet('player_walk_right_with_saber', 'assets/images/game/luke1_walk_right_trim.png', {
       frameWidth: 36,
       frameHeight: 34
     });
@@ -75,6 +81,13 @@ export class AssetManager {
 
     this.scene.load.image('spark', 'assets/images/game/spark1.png');
 
+    // ****** RELICS & CHESTS *******
+    this.scene.load.image('chest', 'assets/images/game/chest.png');
+    this.scene.load.image('chest_open', 'assets/images/game/chest_open.png');
+    this.scene.load.spritesheet('relics', 'assets/images/game/relics.png', {
+      frameWidth: 16,
+      frameHeight: 16
+    });
 
     // Create upgrade icons
     this.createUpgradeIcons();
@@ -97,8 +110,36 @@ export class AssetManager {
       .setOrigin(0.5, 0.5) // Center the background
       .setScale(backgroundScaleFactor); // Scale the background independently
 
-    console.log(`Background dimensions after scaling: (${background.displayWidth}, ${background.displayHeight})`);
-}
+    // Background dimensions after scaling
+
+    // Create player animations
+    this.createPlayerAnimations();
+  }
+
+  /**
+   * Create player animations
+   */
+  private createPlayerAnimations(): void {
+    console.log("Creating player animations...");
+    
+    // Create animation for player without saber (3 frames: 0-2)
+    this.scene.anims.create({
+      key: 'player_walk_right_no_saber',
+      frames: this.scene.anims.generateFrameNumbers('player_walk_right_no_saber', { start: 0, end: 2 }),
+      frameRate: 8,
+      repeat: -1
+    });
+
+    // Create animation for player with saber (3 frames: 0-2)
+    this.scene.anims.create({
+      key: 'player_walk_right_with_saber',
+      frames: this.scene.anims.generateFrameNumbers('player_walk_right_with_saber', { start: 0, end: 2 }),
+      frameRate: 8,
+      repeat: -1
+    });
+    
+    console.log("Player animations created successfully");
+  }
 
   /**
    * Create upgrade icons as textures
@@ -121,6 +162,21 @@ export class AssetManager {
 
     // Create movement icon (cyan boots)
     this.createIconTexture('movement_icon', 0x00ffff);
+
+    // Create saber unlock icon (blue lightsaber)
+    this.createIconTexture('saber_icon', 0x0088ff);
+
+    // Create force unlock icon (purple force)
+    this.createIconTexture('force_unlock_icon', 0xaa00ff);
+
+    // Create R2D2 icon (silver droid)
+    this.createIconTexture('r2d2_icon', 0xcccccc);
+
+    // Create blaster unlock icon (red blaster)
+    this.createIconTexture('blaster_unlock_icon', 0xff0000);
+
+    // Create relic icon (golden star)
+    this.createIconTexture('relic_icon', 0xffd700);
   }
 
   /**
