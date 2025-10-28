@@ -468,6 +468,11 @@ export default class MainScene extends Phaser.Scene {
     if (this.player.hasForceAbility()) {
       this.forceSystem.update(time);
     }
+
+    // Update saber system
+    if (this.player.hasSaberAbility()) {
+      this.saberSystem.update(time);
+    }
     // Check for collisions between player and enemies
     this.checkPlayerEnemyCollisions(this.enemySystem.getVisibleEnemies());
 

@@ -206,32 +206,22 @@ export class Player {
 
 
   public static setupAnimations(scene: Phaser.Scene) {
-    // Animation for player without saber
+    // Animation for player walking
     scene.anims.create({
-      key: 'player_walk_right_no_saber',
-      frames: scene.anims.generateFrameNumbers('player_walk_right_no_saber', { start: 0, end: 3 }),
+      key: 'player_walk_right',
+      frames: scene.anims.generateFrameNumbers('player_walk_right', { start: 0, end: 2 }),
       frameRate: 8,
       repeat: -1
     });
-
-    // Animation for player with saber
-    scene.anims.create({
-      key: 'player_walk_right_with_saber',
-      frames: scene.anims.generateFrameNumbers('player_walk_right_with_saber', { start: 0, end: 3 }),
-      frameRate: 8,
-      repeat: -1
-    });
-
   }
   /**
    * Create and configure the player sprite
    */
   private createSprite(x: number, y: number): Phaser.Physics.Arcade.Sprite {
-    const sprite = this.scene.physics.add.sprite(x, y, 'player_walk_right_no_saber');
-    
+    const sprite = this.scene.physics.add.sprite(x, y, 'player');
+
     sprite.setScale(GAME_CONFIG.PLAYER.SCALE);
     sprite.setDepth(GAME_CONFIG.PLAYER.DEPTH);
-    sprite.setFrame(0);
 
     // Create a slightly smaller hitbox
     if (sprite.body) {
@@ -242,12 +232,6 @@ export class Player {
 
     sprite.setDamping(false);
     sprite.setDrag(0);
-
-    // Ensure the sprite has access to the scene's animation manager after all setup
-    if (!sprite.anims) {
-      sprite.anims = this.scene.anims;
-      console.log("Assigned animation manager to sprite");
-    }
 
     return sprite;
   }
@@ -285,12 +269,7 @@ export class Player {
       dirX = -1;
       this.sprite.setFlipX(true);  // Flip sprite to face left
       this.sprite.body?.setOffset(15, 10)
-      if (this.sprite.anims && this.sprite.anims.exists(this.currentAnimationKey)) {
-        console.log("Playing animation:", this.currentAnimationKey);
-        this.sprite.anims.play(this.currentAnimationKey, true);
-      } else {
-        console.log("Animation not found:", this.currentAnimationKey, "anims:", this.sprite.anims);
-      }
+      this.sprite.anims.play("player_walk_right", true);
       this.isFlippedX = true; // Set flipped state
     }
 
@@ -299,34 +278,19 @@ export class Player {
       this.sprite.body?.setOffset(10, 10)
       dirX = 1;
       this.sprite.setFlipX(false);  // Set sprite to face right (default)
-      if (this.sprite.anims && this.sprite.anims.exists(this.currentAnimationKey)) {
-        console.log("Playing animation:", this.currentAnimationKey);
-        this.sprite.anims.play(this.currentAnimationKey, true);
-      } else {
-        console.log("Animation not found:", this.currentAnimationKey, "anims:", this.sprite.anims);
-      }
+      this.sprite.anims.play("player_walk_right", true);
       this.isFlippedX = false; // Reset flipped state
     }
 
     // Handle vertical movement (up and down)
     if (up && !this.dead) {
       dirY = -1;
-      if (this.sprite.anims && this.sprite.anims.exists(this.currentAnimationKey)) {
-        console.log("Playing animation:", this.currentAnimationKey);
-        this.sprite.anims.play(this.currentAnimationKey, true);
-      } else {
-        console.log("Animation not found:", this.currentAnimationKey, "anims:", this.sprite.anims);
-      }
+      this.sprite.anims.play("player_walk_right", true);
     }
 
     if (down && !this.dead) {
       dirY = 1;
-      if (this.sprite.anims && this.sprite.anims.exists(this.currentAnimationKey)) {
-        console.log("Playing animation:", this.currentAnimationKey);
-        this.sprite.anims.play(this.currentAnimationKey, true);
-      } else {
-        console.log("Animation not found:", this.currentAnimationKey, "anims:", this.sprite.anims);
-      }
+      this.sprite.anims.play("player_walk_right", true);
     }
 
 

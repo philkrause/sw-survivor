@@ -21,7 +21,7 @@ export class AssetManager {
     this.scene.load.image('player', 'assets/images/game/luke1_start_blaster2.png');
 
     // Load both player spritesheets
-    this.scene.load.spritesheet('player_walk_right_no_saber', 'assets/images/game/luke1_walk_right_blaster2.png', {
+    this.scene.load.spritesheet('player_walk_right', 'assets/images/game/luke1_walk_right_blaster2.png', {
       frameWidth: 36,
       frameHeight: 34
     });
@@ -30,6 +30,11 @@ export class AssetManager {
       frameWidth: 36,
       frameHeight: 34
     });
+
+    // this.scene.load.spritesheet('player_walk_right', 'assets/images/game/luke1_walk_right_trim.png', {
+    //   frameWidth: 36,
+    //   frameHeight: 34
+    // });
 
 
     // ************** PLAYER ATTACKS **********
@@ -112,34 +117,8 @@ export class AssetManager {
 
     // Background dimensions after scaling
 
-    // Create player animations
-    this.createPlayerAnimations();
   }
 
-  /**
-   * Create player animations
-   */
-  private createPlayerAnimations(): void {
-    console.log("Creating player animations...");
-    
-    // Create animation for player without saber (3 frames: 0-2)
-    this.scene.anims.create({
-      key: 'player_walk_right_no_saber',
-      frames: this.scene.anims.generateFrameNumbers('player_walk_right_no_saber', { start: 0, end: 2 }),
-      frameRate: 8,
-      repeat: -1
-    });
-
-    // Create animation for player with saber (3 frames: 0-2)
-    this.scene.anims.create({
-      key: 'player_walk_right_with_saber',
-      frames: this.scene.anims.generateFrameNumbers('player_walk_right_with_saber', { start: 0, end: 2 }),
-      frameRate: 8,
-      repeat: -1
-    });
-    
-    console.log("Player animations created successfully");
-  }
 
   /**
    * Create upgrade icons as textures
