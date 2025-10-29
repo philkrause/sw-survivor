@@ -48,6 +48,9 @@ export class Player {
   public hasBlasterUpgrade: boolean = true; // Start with blaster unlocked
   private hasSaberUpgrade: boolean = false; // Saber starts locked
   
+  // Stress test mode
+  private isStressTestMode: boolean = false;
+  
   // Relic system
   private relics: Set<string> = new Set(); // Track collected relics
   private damageReduction: number = 0; // Track damage reduction from relics
@@ -108,8 +111,11 @@ export class Player {
 
   // ** ATTACKS ** //
   public initProjectilePool() {
-    console.log("Projectile pool initialized for player");
+    //console.log("Projectile pool initialized for player");
     if (this.projectileSystem) {
+      // Set player reference for speed multiplier
+      this.projectileSystem.setPlayer(this);
+      
       this.projectileSystem.createPool({
         key: GAME_CONFIG.BLASTER.PLAYER.KEY,
         speed: GAME_CONFIG.BLASTER.PLAYER.SPEED,
@@ -160,6 +166,24 @@ export class Player {
     const dirX = normalizedDirection.x;
     const dirY = normalizedDirection.y;
 
+    // Calculate projectile spawn position (in front of player)
+    const projectileOffset = 20; // Distance in front of player
+    let projectileSpawnX = playerPos.x + (dirX * projectileOffset);
+    let projectileSpawnY = playerPos.y + (dirY * projectileOffset);
+    
+    // Adjust spawn position based on aiming direction
+    if (Math.abs(dirY) > Math.abs(dirX)) {
+      // Primarily vertical movement - adjust horizontal offset
+      if (dirY < 0) { // Aiming up
+        projectileSpawnY -= 5; // Higher up
+      } else { // Aiming down
+        projectileSpawnY += 15; // Lower down
+      }
+    } else {
+      // Primarily horizontal movement - adjust vertical offset
+      projectileSpawnY += 10; // Slightly below center for horizontal shots
+    }
+
     // Calculate angle for spread shots based on movement direction
     const baseAngle = Math.atan2(dirY, dirX);
     // Fire multiple projectiles if projectileCount > 1
@@ -180,16 +204,15 @@ export class Player {
       // Fire projectile with current damage and size
       const projectile = this.projectileSystem.fire(
         GAME_CONFIG.BLASTER.PLAYER.KEY,
-        playerPos.x,
-        playerPos.y,
+        projectileSpawnX,
+        projectileSpawnY,
         spreadDirX,
-        spreadDirY
+        spreadDirY,
+        'blaster' // Projectile type for damage multiplier
       );
 
-      // Set damage and size for the projectile
+      // Projectile damage is now handled by ProjectileSystem with multipliers
       if (projectile) {
-        //(projectile as any).damage = this.getBlasterDamage();
-        projectile.setData('damage', this.getBlasterDamage());
 
         projectile.setScale(GAME_CONFIG.BLASTER.PLAYER.SCALE * this.projectileSizeMultiplier)
 
@@ -206,10 +229,34 @@ export class Player {
 
 
   public static setupAnimations(scene: Phaser.Scene) {
-    // Animation for player walking
+    // Animation for player walking right
     scene.anims.create({
       key: 'player_walk_right',
       frames: scene.anims.generateFrameNumbers('player_walk_right', { start: 0, end: 2 }),
+      frameRate: 8,
+      repeat: -1
+    });
+
+    // Animation for player walking up
+    scene.anims.create({
+      key: 'player_walk_up',
+      frames: scene.anims.generateFrameNumbers('player_walk_up', { start: 0, end: 2 }),
+      frameRate: 8,
+      repeat: -1
+    });
+
+    // Animation for player walking down
+    scene.anims.create({
+      key: 'player_walk_down',
+      frames: scene.anims.generateFrameNumbers('player_walk_down', { start: 0, end: 2 }),
+      frameRate: 8,
+      repeat: -1
+    });
+
+    // Animation for player walking right with saber
+    scene.anims.create({
+      key: 'player_walk_right_with_saber',
+      frames: scene.anims.generateFrameNumbers('player_walk_right_with_saber', { start: 0, end: 2 }),
       frameRate: 8,
       repeat: -1
     });
@@ -232,6 +279,9 @@ export class Player {
 
     sprite.setDamping(false);
     sprite.setDrag(0);
+
+    // Set initial body offset (default to right-facing)
+    sprite.body?.setOffset(10, 10);
 
     return sprite;
   }
@@ -264,41 +314,164 @@ export class Player {
     const up = this.wasdKeys.W.isDown || this.cursors.up!.isDown;
     const down = this.wasdKeys.S.isDown || this.cursors.down!.isDown;
 
+    // Determine primary direction for sprite selection
+    let primaryDirection = 'right'; // default
+
     // Check if A or left arrow key is pressed (move left)
     if (left && !this.dead) {
       dirX = -1;
       this.sprite.setFlipX(true);  // Flip sprite to face left
-      this.sprite.body?.setOffset(15, 10)
-      this.sprite.anims.play("player_walk_right", true);
+      this.sprite.body?.setOffset(15, 10);
       this.isFlippedX = true; // Set flipped state
+      primaryDirection = 'left';
     }
 
     // Check if D or right arrow key is pressed (move right)
     if (right && !this.dead) {
-      this.sprite.body?.setOffset(10, 10)
       dirX = 1;
       this.sprite.setFlipX(false);  // Set sprite to face right (default)
-      this.sprite.anims.play("player_walk_right", true);
+      this.sprite.body?.setOffset(10, 10);
       this.isFlippedX = false; // Reset flipped state
+      primaryDirection = 'right';
     }
 
     // Handle vertical movement (up and down)
     if (up && !this.dead) {
       dirY = -1;
-      this.sprite.anims.play("player_walk_right", true);
+      // If moving primarily up, use up sprite
+      if (Math.abs(dirY) > Math.abs(dirX)) {
+        primaryDirection = 'up';
+      }
     }
 
     if (down && !this.dead) {
       dirY = 1;
-      this.sprite.anims.play("player_walk_right", true);
+      // If moving primarily down, use down sprite
+      if (Math.abs(dirY) > Math.abs(dirX)) {
+        primaryDirection = 'down';
+      }
     }
 
+    // Update sprite texture based on primary direction
+    this.updatePlayerSprite(primaryDirection);
 
     return { x: dirX, y: dirY };
   }
 
   getFlippedX(): boolean {
     return this.isFlippedX;
+  }
+
+
+  /**
+   * Update player sprite animation based on direction
+   */
+  private updatePlayerSprite(direction: string): void {
+    if (!this.sprite || this.dead || !this.sprite.anims) return;
+
+    // Determine animation based on direction and saber status
+    if (this.hasSaberUpgrade) {
+      // For saber, only use saber animation for horizontal movement
+      // For up/down, use regular animations since there's no saber up/down animation
+      switch (direction) {
+        case 'up':
+          this.sprite.anims.play("player_walk_up", true);
+          break;
+        case 'down':
+          this.sprite.anims.play("player_walk_down", true);
+          break;
+        case 'left':
+        case 'right':
+        default:
+          // Use saber animation for horizontal movement
+          this.sprite.anims.play("player_walk_right_with_saber", true);
+          break;
+      }
+    } else {
+      // Use appropriate walking animation for each direction
+      switch (direction) {
+        case 'up':
+          this.sprite.anims.play("player_walk_up", true);
+          break;
+        case 'down':
+          this.sprite.anims.play("player_walk_down", true);
+          break;
+        case 'left':
+        case 'right':
+        default:
+          this.sprite.anims.play("player_walk_right", true);
+          break;
+      }
+    }
+  }
+
+  /**
+   * Update player sprite based on last direction when not moving
+   */
+  private updatePlayerSpriteFromLastDirection(): void {
+    if (!this.sprite || this.dead || !this.sprite.anims) return;
+
+    // Determine primary direction from lastDirection
+    let primaryDirection = 'right'; // default
+    
+    if (Math.abs(this.lastDirection.y) > Math.abs(this.lastDirection.x)) {
+      // Primarily vertical movement
+      if (this.lastDirection.y < 0) {
+        primaryDirection = 'up';
+      } else {
+        primaryDirection = 'down';
+      }
+    } else {
+      // Primarily horizontal movement
+      if (this.lastDirection.x < 0) {
+        primaryDirection = 'left';
+      } else {
+        primaryDirection = 'right';
+      }
+    }
+
+    // Use the same logic as updatePlayerSprite but for idle state
+    if (this.hasSaberUpgrade) {
+      // For saber, only use saber animation for horizontal movement
+      // For up/down, use regular animations since there's no saber up/down animation
+      switch (primaryDirection) {
+        case 'up':
+          this.sprite.anims.play("player_walk_up", true);
+          break;
+        case 'down':
+          this.sprite.anims.play("player_walk_down", true);
+          break;
+        case 'left':
+        case 'right':
+        default:
+          // Use saber animation for horizontal movement
+          this.sprite.anims.play("player_walk_right_with_saber", true);
+          break;
+      }
+    } else {
+      // Use appropriate walking animation for each direction
+      switch (primaryDirection) {
+        case 'up':
+          this.sprite.anims.play("player_walk_up", true);
+          break;
+        case 'down':
+          this.sprite.anims.play("player_walk_down", true);
+          break;
+        case 'left':
+        case 'right':
+        default:
+          // For horizontal movement, stop animation when not moving
+          this.sprite.anims.stop();
+          this.sprite.setTexture('player'); // Set to static sprite
+          // Reset body offset to center the health bar based on flip state
+          if (this.sprite.flipX) {
+            this.sprite.body?.setOffset(15, 10); // Offset for flipped sprite
+          } else {
+            this.sprite.body?.setOffset(10, 10); // Offset for normal sprite
+          }
+          break;
+      }
+    }
   }
 
   /**
@@ -330,8 +503,8 @@ export class Player {
    * Apply damage to the player
    */
   takeDamage(amount: number): boolean {
-    // Skip if player is invulnerable
-    if (this.isInvulnerable) {
+    // Skip if player is invulnerable or in stress test mode
+    if (this.isInvulnerable || this.isStressTestMode) {
       return false;
     }
 
@@ -394,7 +567,9 @@ export class Player {
    */
   private onDefeat(): void {
     // Stop player movement
-    this.sprite.setVelocity(0, 0);
+    if (this.sprite && this.sprite.body) {
+      this.sprite.setVelocity(0, 0);
+    }
     const cam = this.scene.cameras.main
     //death animation
     this.deathVisual();
@@ -488,6 +663,11 @@ stopDamageTimer(): void {
  * Check if player is currently overlapping with enemies
  */
 setOverlapping(isOverlapping: boolean): void {
+  // Skip damage if in stress test mode
+  if (this.isStressTestMode) {
+    return;
+  }
+  
   if(isOverlapping) {
     this.startDamageTimer();
   } else {
@@ -516,9 +696,13 @@ isDead(): boolean {
   /**
    * Handle experience collection
    */
-  private onExperienceCollected(_value: number, totalExperience: number): void {
-  // Update player experience
-  this.experience = totalExperience;
+  private onExperienceCollected(value: number, totalExperience: number): void {
+  // Apply experience multiplier to the gained experience
+  const multipliedValue = value * this.experienceMultiplier;
+  const adjustedTotal = totalExperience - value + multipliedValue;
+  
+  // Update player experience with multiplied value
+  this.experience = adjustedTotal;
 
   // Check for level up
   this.checkLevelUp();
@@ -764,6 +948,7 @@ setLevelingUp(isLevelingUp: boolean): void {
 }
 
 
+
 //Check if player is currently in the level-up state
 isInLevelUpState(): boolean {
   return this.isLevelingUp;
@@ -985,13 +1170,16 @@ deathVisual(): void {
 
 
 
-update(): void {
+  update(): void {
 
   // Skip update if player is in level-up state
   if(this.isLevelingUp) {
-    this.sprite.setVelocity(0, 0);
+    if (this.sprite && this.sprite.body) {
+      this.sprite.setVelocity(0, 0);
+    }
     return;
   }
+  
 
   const direction = this.getInputDirection();
   if (direction.x !== 0 || direction.y !== 0) {
@@ -1003,13 +1191,20 @@ update(): void {
     const normalized = normalizeVector(direction.x, direction.y);
 
     // Apply movement with speed multiplier
-    this.sprite.setVelocity(
-      normalized.x * this.getSpeed(),
-      normalized.y * this.getSpeed()
-    );
+    if (this.sprite && this.sprite.body) {
+      this.sprite.setVelocity(
+        normalized.x * this.getSpeed(),
+        normalized.y * this.getSpeed()
+      );
+    }
   } else {
-    // No input, stop movement
-    this.sprite.setVelocity(0, 0);
+    // No input, stop movement but maintain last direction sprite
+    if (this.sprite && this.sprite.body) {
+      this.sprite.setVelocity(0, 0);
+    }
+    
+    // Set animation based on last direction when not moving
+    this.updatePlayerSpriteFromLastDirection();
   }
 
 
@@ -1042,6 +1237,20 @@ update(): void {
    */
   increaseProjectileSpeed(multiplier: number): void {
     this.projectileSpeedMultiplier += multiplier;
+  }
+
+  /**
+   * Set stress test mode (makes player invulnerable)
+   */
+  setStressTestMode(enabled: boolean): void {
+    this.isStressTestMode = enabled;
+  }
+
+  /**
+   * Check if stress test mode is active
+   */
+  isStressTestActive(): boolean {
+    return this.isStressTestMode;
   }
 
 } 

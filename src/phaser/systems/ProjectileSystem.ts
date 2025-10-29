@@ -23,6 +23,7 @@ export interface ProjectileConfig {
  */
 export class ProjectileSystem {
   private scene: Phaser.Scene;
+  private player: any; // Player reference for speed multiplier
   public pools: Map<string, Phaser.Physics.Arcade.Group> = new Map();
   private configs: Map<string, ProjectileConfig> = new Map();
   private vectorBuffer = new Phaser.Math.Vector2();
@@ -32,10 +33,13 @@ export class ProjectileSystem {
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
+  }
 
-    // Get the camera's world view dimensions
-    const camera = this.scene.cameras.main;
-    console.log( `Camera dimensions: ${camera.width}x${camera.height}`);
+  /**
+   * Set the player reference for speed multiplier
+   */
+  setPlayer(player: any): void {
+    this.player = player;
   }
 
 
@@ -102,7 +106,8 @@ export class ProjectileSystem {
     x: number,
     y: number,
     dirX: number,
-    dirY: number
+    dirY: number,
+    projectileType: string = 'blaster'
   ): Phaser.Physics.Arcade.Sprite | null {
     const group = this.pools.get(key);
     const config = this.configs.get(key);
@@ -136,19 +141,42 @@ export class ProjectileSystem {
       projectile.body.setSize(projectile.width, projectile.height); // Ensure proper body size
     }
 
-    // Set velocity based on direction
+    // Set velocity based on direction with player speed multiplier
     const dir = this.vectorBuffer.set(dirX, dirY).normalize();
-    projectile.setVelocity(dir.x * config.speed, dir.y * config.speed);
+    const speedMultiplier = this.player?.projectileSpeedMultiplier || 1.0;
+    const finalSpeed = config.speed * speedMultiplier;
+    projectile.setVelocity(dir.x * finalSpeed, dir.y * finalSpeed);
 
     // Set rotation if needed
     if (config.rotateToDirection) {
       projectile.setRotation(Math.atan2(dirY, dirX));
     }
 
-    // Set custom data
+    // Set custom data with damage multiplier applied
     projectile.setData('lifespan', config.lifespan);
     projectile.setData('createdAt', this.scene.time.now);
-    projectile.setData('damage', config.damage || 1);
+    
+    // Apply damage multiplier based on projectile type
+    let damageMultiplier = 1.0;
+    if (this.player) {
+      switch (projectileType) {
+        case 'blaster':
+          damageMultiplier = this.player.damageBlasterMultiplier || 1.0;
+          break;
+        case 'force':
+          damageMultiplier = this.player.forceDamageMultiplier || 1.0;
+          break;
+        case 'r2d2':
+          damageMultiplier = this.player.R2D2DamageMultiplier || 1.0;
+          break;
+        case 'saber':
+          damageMultiplier = this.player.saberDamageMultiplier || 1.0;
+          break;
+      }
+    }
+    
+    const finalDamage = (config.damage || 1) * damageMultiplier;
+    projectile.setData('damage', finalDamage);
 
     return projectile;
   }
@@ -234,5 +262,41 @@ export class ProjectileSystem {
         this.deactivate(projectile);
       }
     }
+  }
+
+  /**
+   * Apply stress test configuration
+   */
+  setStressTestConfig(config: {
+    maxCount: number;
+  }): void {
+    // Update max count for all pools
+    for (const [key, group] of this.pools) {
+      if (config.maxCount > group.maxSize) {
+        group.maxSize = config.maxCount;
+      }
+    }
+  }
+
+  /**
+   * Get total projectile count across all pools
+   */
+  getTotalProjectileCount(): number {
+    let total = 0;
+    for (const [key, group] of this.pools) {
+      total += group.children.size;
+    }
+    return total;
+  }
+
+  /**
+   * Get active projectile count across all pools
+   */
+  getActiveProjectileCount(): number {
+    let active = 0;
+    for (const [key, group] of this.pools) {
+      active += group.getTotalUsed();
+    }
+    return active;
   }
 } 

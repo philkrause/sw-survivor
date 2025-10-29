@@ -15,7 +15,7 @@ export class OptionsMenu {
   private volumeSliderBg!: Phaser.GameObjects.Graphics;
   private volumeText!: Phaser.GameObjects.Text;
   private title!: Phaser.GameObjects.Text;
-  private currentVolume: number = 1.0;
+  private currentVolume: number = 0.0;
   private isVolumeSelected: boolean = false;
 
   constructor(scene: Phaser.Scene, callbacks: OptionsMenuCallbacks) {
@@ -87,15 +87,15 @@ export class OptionsMenu {
     this.isVisible = true;
     this.selectedIndex = 0;
     this.isVolumeSelected = false;
+    
+    // Sync initial volume
+    this.callbacks.onVolumeChange(this.currentVolume);
 
     // Check if StarJedi font is already loaded, otherwise wait for it
-    console.log('Loading StarJedi font for OptionsMenu...');
     if (document.fonts.check('48px StarJedi')) {
-      console.log('StarJedi font already loaded for OptionsMenu');
       this.createMenuElements();
     } else {
       document.fonts.load('48px StarJedi').then(() => {
-        console.log('StarJedi font loaded for OptionsMenu');
         this.createMenuElements();
       }).catch((error) => {
         console.error('Failed to load StarJedi font:', error);

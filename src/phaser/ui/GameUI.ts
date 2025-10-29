@@ -15,6 +15,8 @@ export class GameUI {
   private healthBar: Phaser.GameObjects.Graphics;
   private player: Player;
   private relicDisplay: Phaser.GameObjects.Container;
+  private gameTimer: Phaser.GameObjects.Text;
+  private startTime: number;
 
   constructor(scene: Phaser.Scene, player: Player) {
     this.scene = scene;
@@ -27,6 +29,8 @@ export class GameUI {
     this.healthBar = this.createHealthBar();
     this.experienceBar = this.createExperienceBar();
     this.relicDisplay = this.createRelicDisplay();
+    this.gameTimer = this.createGameTimer();
+    this.startTime = this.scene.time.now;
     
     // Listen for level up events
     this.scene.events.on('player-level-up', this.onPlayerLevelUp, this);
@@ -295,7 +299,7 @@ export class GameUI {
    * Show a relic in the UI
    */
   showRelic(relicId: string, relicName: string, relicDescription: string): void {
-    console.log("GameUI.showRelic called:", relicName, relicDescription);
+    //console.log("GameUI.showRelic called:", relicName, relicDescription);
     
     // Clear existing relic display
     this.relicDisplay.removeAll(true);
@@ -304,20 +308,31 @@ export class GameUI {
     const x = 20; // Left side of screen
     const y = 50; // Below experience bar
     
-    // Create background
-    const bg = this.scene.add.rectangle(x, y, 200, 60, 0x1d1805, 0.9);
+    // Position the container at the correct location
+    this.relicDisplay.setPosition(x, y);
+    
+    // Create background (positioned relative to container at 0,0)
+    const bg = this.scene.add.rectangle(0, 0, 200, 60, 0x1d1805, 0.9);
     bg.setStrokeStyle(2, 0xf0c040);
+    bg.setScrollFactor(0); // Fix to camera viewport
+    bg.setDepth(2000); // Ensure it's above other UI elements
     this.relicDisplay.add(bg);
     
-    // Create relic sprite - map relic ID to sprite frame
+    // Create relic sprite - map relic ID to sprite frame (positioned relative to container)
     const relicFrame = this.getRelicFrame(relicId);
-    const relicSprite = this.scene.add.sprite(x - 60, y, 'relics');
+    console.log("Creating relic sprite for ID:", relicId, "frame:", relicFrame);
+    const relicSprite = this.scene.add.sprite(-60, 0, 'relics');
     relicSprite.setFrame(relicFrame);
     relicSprite.setScale(2);
+    relicSprite.setScrollFactor(0); // Fix to camera viewport
+    relicSprite.setDepth(2000); // Ensure it's above other UI elements
+    relicSprite.setVisible(true); // Ensure it's visible
+    relicSprite.setAlpha(1); // Ensure full opacity
     this.relicDisplay.add(relicSprite);
+    console.log("Relic sprite created:", relicSprite.visible, relicSprite.alpha, relicSprite.frame.name);
     
-    // Create relic name text
-    const nameText = this.scene.add.text(x + 20, y - 10, relicName, {
+    // Create relic name text (positioned relative to container)
+    const nameText = this.scene.add.text(20, -10, relicName, {
       fontSize: '16px',
       color: '#f0c040',
       fontStyle: 'bold',
@@ -326,10 +341,12 @@ export class GameUI {
       strokeThickness: 2
     });
     nameText.setOrigin(0, 0.5);
+    nameText.setScrollFactor(0); // Fix to camera viewport
+    nameText.setDepth(2001); // Ensure it's above other UI elements
     this.relicDisplay.add(nameText);
     
-    // Create relic description text
-    const descText = this.scene.add.text(x + 20, y + 10, relicDescription, {
+    // Create relic description text (positioned relative to container)
+    const descText = this.scene.add.text(20, 10, relicDescription, {
       fontSize: '12px',
       color: '#ffffff',
       align: 'left',
@@ -337,12 +354,18 @@ export class GameUI {
       strokeThickness: 1
     });
     descText.setOrigin(0, 0.5);
+    descText.setScrollFactor(0); // Fix to camera viewport
+    descText.setDepth(2001); // Ensure it's above other UI elements
     this.relicDisplay.add(descText);
     
     // Show the display
     this.relicDisplay.setVisible(true);
     console.log("Relic display set to visible, container children:", this.relicDisplay.list.length);
     console.log("Relic display position:", this.relicDisplay.x, this.relicDisplay.y);
+    console.log("Relic display visible:", this.relicDisplay.visible);
+    console.log("Relic display alpha:", this.relicDisplay.alpha);
+    console.log("Relic sprite position:", relicSprite.x, relicSprite.y);
+    console.log("Relic sprite visible:", relicSprite.visible);
   }
 
   /**
@@ -363,6 +386,61 @@ export class GameUI {
     };
     
     return relicFrameMap[relicId] || 0; // Default to frame 0 if not found
+  }
+
+  /**
+   * Create the game timer display
+   */
+  private createGameTimer(): Phaser.GameObjects.Text {
+    const timer = this.scene.add.text(
+      this.scene.cameras.main.width / 2, // Center horizontally
+      40, // Below the experience bar
+      '00:00',
+      {
+        fontSize: '24px',
+        color: '#ffffff',
+        align: 'center',
+        stroke: '#000000',
+        strokeThickness: 3
+      }
+    );
+    
+    timer.setOrigin(0.5, 0.5);
+    timer.setScrollFactor(0); // Fix to camera viewport
+    timer.setDepth(2000); // Above other UI elements
+    
+    return timer;
+  }
+
+  /**
+   * Update the game timer
+   */
+  public updateTimer(): void {
+    if (!this.gameTimer) return;
+    
+    const elapsedTime = this.scene.time.now - this.startTime;
+    const minutes = Math.floor(elapsedTime / 60000);
+    const seconds = Math.floor((elapsedTime % 60000) / 1000);
+    
+    const timeString = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    this.gameTimer.setText(timeString);
+  }
+
+  /**
+   * Get the current game time in milliseconds
+   */
+  public getGameTime(): number {
+    return this.scene.time.now - this.startTime;
+  }
+
+  /**
+   * Get the current game time formatted as MM:SS
+   */
+  public getFormattedTime(): string {
+    const elapsedTime = this.getGameTime();
+    const minutes = Math.floor(elapsedTime / 60000);
+    const seconds = Math.floor((elapsedTime % 60000) / 1000);
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   }
   
   /**

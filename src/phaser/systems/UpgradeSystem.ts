@@ -47,7 +47,7 @@ export class UpgradeSystem {
     // SABER UPGRADES
     this.availableUpgrades.push({
       id: 'saber_speed',
-      name: 'Increase Saber Speed',
+      name: 'Jedi Reflex Training',
       description: "Increase Saber Interval by 10%",
       icon: 'saber_icon',
       level: 0,
@@ -61,7 +61,7 @@ export class UpgradeSystem {
 
     this.availableUpgrades.push({
       id: 'saber_damage',
-      name: 'Increase Saber Damage',
+      name: 'Lightsaber Mastery',
       description: "Increase Saber Damage by 15%",
       icon: 'saber_icon',
       level: 0,
@@ -76,7 +76,7 @@ export class UpgradeSystem {
     // ** SABER UNLOCK **
     this.availableUpgrades.push({
       id: 'unlock_saber',
-      name: 'Unlock Lightsaber',
+      name: 'Awaken the Blade',
       description: "Unlock the legendary lightsaber weapon.",
       icon: 'saber_icon',
       level: 0,
@@ -91,7 +91,7 @@ export class UpgradeSystem {
     // ** THE FORCE UNLOCK **
     this.availableUpgrades.push({
       id: 'unlock_force',
-      name: 'Unlock The Force',
+      name: 'Force Awakens',
       description: "Damage and push back enemies.",
       icon: 'force_unlock_icon',
       level: 0,
@@ -104,7 +104,7 @@ export class UpgradeSystem {
     // // Add attack speed upgrade
     this.availableUpgrades.push({
       id: 'force_speed',
-      name: 'Increase Force Speed',
+      name: 'Force Meditation',
       description: "Increase Force Interval by 10%",
       icon: 'speed_icon',
       level: 0,
@@ -117,7 +117,7 @@ export class UpgradeSystem {
 
     this.availableUpgrades.push({
       id: 'force_damage',
-      name: 'Increase Force Damage',
+      name: 'Force Mastery',
       description: "Increase Force Damage by 15%",
       icon: 'speed_icon',
       level: 0,
@@ -146,7 +146,7 @@ export class UpgradeSystem {
     // ** R2D2 UNLOCK **
     this.availableUpgrades.push({
       id: 'r2d2_droid',
-      name: 'Deploy R2-D2 Droid',
+      name: 'Unlock R2-D2',
       description: "Deploys R2-D2 that damages nearby enemies.",
       icon: 'r2d2_icon',
       level: 0,
@@ -159,7 +159,7 @@ export class UpgradeSystem {
 
     this.availableUpgrades.push({
       id: 'r2d2_damage',
-      name: 'Increase R2-D2 Damage',
+      name: 'Droid Combat Protocols',
       description: "Increase R2-D2 damage.",
       icon: 'r2d2_icon',
       level: 0,
@@ -175,7 +175,7 @@ export class UpgradeSystem {
     // ** BLASTER **
     this.availableUpgrades.push({
       id: 'damage',
-      name: 'Increased Blaster Damage',
+      name: 'Blaster Calibration',
       description: 'Increase projectile damage by 25%',
       icon: 'damage_icon',
       level: 0,
@@ -190,7 +190,7 @@ export class UpgradeSystem {
     //Add attack speed upgrade
     this.availableUpgrades.push({
       id: 'projectile_speed',
-      name: 'Blaster Attack Speed',
+      name: 'Rapid Fire Training',
       description: 'Increase attack speed by 15%',
       icon: 'speed_icon',
       level: 0,
@@ -204,7 +204,7 @@ export class UpgradeSystem {
     // Add projectile count upgrade
     this.availableUpgrades.push({
       id: 'projectile_count',
-      name: 'Multi-Shot',
+      name: 'Chewbaccas Mod',
       description: 'Fire an additional projectile',
       icon: 'multishot_icon',
       level: 0,
@@ -218,7 +218,7 @@ export class UpgradeSystem {
     //Add health upgrade
     this.availableUpgrades.push({
       id: 'max_health',
-      name: 'Max Health',
+      name: 'Jedi Endurance',
       description: 'Increase maximum health by 20',
       icon: 'health_icon',
       level: 0,
@@ -232,7 +232,7 @@ export class UpgradeSystem {
     // //Add movement speed upgrade
     this.availableUpgrades.push({
       id: 'movement_speed',
-      name: 'Movement Speed',
+      name: 'Moon Boots',
       description: 'Increase movement speed by 10%',
       icon: 'movement_icon',
       level: 0,
@@ -416,7 +416,7 @@ export class UpgradeSystem {
   applyUpgrade(upgradeId: string): void {
     // Find the upgrade
     const upgrade = this.availableUpgrades.find(u => u.id === upgradeId);
-    console.log("Upgrade ID: ", upgradeId)
+    //console.log("Upgrade ID: ", upgradeId)
     if (!upgrade) {
       console.warn(`Upgrade with id ${upgradeId} not found`);
       return;
@@ -437,7 +437,7 @@ export class UpgradeSystem {
     // Update acquired upgrades
     this.acquiredUpgrades.set(upgradeId, currentLevel + 1);
 
-    console.log(`Applied upgrade: ${upgrade.name} (Level ${currentLevel + 1})`);
+    //console.log(`Applied upgrade: ${upgrade.name} (Level ${currentLevel + 1})`);
   }
 
   /**
@@ -517,7 +517,7 @@ export class UpgradeSystem {
 
     this.fallingTweens.forEach((tween) => tween.stop());
     this.fallingTweens = []; // Clear the tween references
-    console.log('All falling sprites stopped.');
+    //console.log('All falling sprites stopped.');
   }
 
   /**

@@ -454,7 +454,7 @@ export class TfighterSystem {
   public dropRelic(enemy: Phaser.Physics.Arcade.Sprite): void {
     // 8% chance to drop a relic from T-fighters (higher than regular enemies)
     if (Math.random() < 0.08) {
-      console.log("T-fighter dropping relic at:", enemy.x, enemy.y);
+      //console.log("T-fighter dropping relic at:", enemy.x, enemy.y);
       this.scene.events.emit('relic-dropped', enemy.x, enemy.y);
     }
   }
@@ -463,19 +463,8 @@ export class TfighterSystem {
    * Create a visual effect when an enemy is defeated
    */
   private createDeathEffect(x: number, y: number): void {
-    // Create particles for death effect
-    const particles = this.scene.add.particles(x, y, GAME_CONFIG.EXPERIENCE_ORB.KEY, {
-      speed: { min: 50, max: 100 },
-      scale: { start: 0.2, end: 0 },
-      quantity: 5,
-      lifespan: 500,
-      tint: 0xFFD700
-    });
-
-    // Auto-destroy after animation completes
-    this.scene.time.delayedCall(500, () => {
-      particles.destroy();
-    });
+    // Emit event for particle effects system to handle
+    this.scene.events.emit('enemy-death', x, y, 'tie_fighter');
   }
 
   /**
@@ -664,5 +653,43 @@ export class TfighterSystem {
    */
   setTarget(target: Phaser.Physics.Arcade.Sprite): void {
     this.target = target;
+  }
+
+  /**
+   * Apply stress test configuration
+   */
+  setStressTestConfig(config: {
+    spawnInterval: number;
+    maxCount: number;
+  }): void {
+    // Update spawn timer
+    if (this.spawnTimer) {
+      this.spawnTimer.destroy();
+    }
+    this.spawnTimer = this.scene.time.addEvent({
+      delay: config.spawnInterval,
+      callback: this.spawnEnemy,
+      callbackScope: this,
+      loop: true
+    });
+
+    // Update max count (resize group if needed)
+    if (config.maxCount > this.enemies.maxSize) {
+      this.enemies.maxSize = config.maxCount;
+    }
+  }
+
+  /**
+   * Get current T-fighter count
+   */
+  getEnemyCount(): number {
+    return this.activeEnemies.size;
+  }
+
+  /**
+   * Get total T-fighter count including inactive
+   */
+  getTotalEnemyCount(): number {
+    return this.enemies.children.size;
   }
 } 

@@ -20,8 +20,18 @@ export class AssetManager {
     // ********** PLAYER **********
     this.scene.load.image('player', 'assets/images/game/luke1_start_blaster2.png');
 
-    // Load both player spritesheets
+    // Load player spritesheets for different directions
     this.scene.load.spritesheet('player_walk_right', 'assets/images/game/luke1_walk_right_blaster2.png', {
+      frameWidth: 36,
+      frameHeight: 34
+    });
+
+    this.scene.load.spritesheet('player_walk_up', 'assets/images/game/luke1_start_blaster2_up.png', {
+      frameWidth: 36,
+      frameHeight: 34
+    });
+
+    this.scene.load.spritesheet('player_walk_down', 'assets/images/game/luke1_start_blaster2_down.png', {
       frameWidth: 36,
       frameHeight: 34
     });
@@ -77,6 +87,12 @@ export class AssetManager {
 
     this.scene.load.image('enemy', 'assets/images/game/enemy.png');
 
+    // Load AT enemy spritesheet (4 frames)
+    this.scene.load.spritesheet('at_enemy', 'assets/images/game/at.png', {
+      frameWidth: 320,  // 1280 ÷ 4 = 320 per frame
+      frameHeight: 320  // Height is 320
+    });
+
     // ****** ENVIRONMENT *******
 
     // Load world background
@@ -89,6 +105,7 @@ export class AssetManager {
     // ****** RELICS & CHESTS *******
     this.scene.load.image('chest', 'assets/images/game/chest.png');
     this.scene.load.image('chest_open', 'assets/images/game/chest_open.png');
+    this.scene.load.image('arrow', 'assets/images/game/arrow.png');
     this.scene.load.spritesheet('relics', 'assets/images/game/relics.png', {
       frameWidth: 16,
       frameHeight: 16

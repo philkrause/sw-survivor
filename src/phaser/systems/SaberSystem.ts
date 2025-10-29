@@ -67,10 +67,10 @@ export class SaberSystem {
     getPlayerData: () => { x: number; y: number; facingLeft: boolean },
     onHit?: (hitbox: Phaser.Geom.Rectangle) => void
   ): void {
-    console.log("Star Auto Slash is called")
+    //console.log("Star Auto Slash is called")
 
     if (this.slashTimer) {
-      console.log("Slash timer destroyed")
+      //console.log("Slash timer destroyed")
       this.slashTimer.destroy();
     }
 
@@ -136,12 +136,14 @@ export class SaberSystem {
 
     // Deal damage to each enemy using the enemySystem
     enemies.forEach((enemy) => {
-
+      // Emit saber hit effect
+      this.scene.events.emit('saber-hit', enemy.x, enemy.y, isCritical);
       this.enemySystem.damageEnemy(enemy, dmg, 0, isCritical);
     });
 
     tfighters.forEach((enemy) => {
-
+      // Emit saber hit effect
+      this.scene.events.emit('saber-hit', enemy.x, enemy.y, isCritical);
       this.tfighterSystem.damageEnemy(enemy, dmg, 0, isCritical);
     });
 

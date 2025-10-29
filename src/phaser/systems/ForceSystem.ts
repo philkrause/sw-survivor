@@ -68,6 +68,9 @@ export class ForceSystem {
     const enemies = this.enemySystem.getVisibleEnemies();
     const tfighters = this.tfighterSystem.getVisibleEnemies();
 
+    // Emit force push particle effect
+    this.scene.events.emit('force-push', x, y);
+
     enemies.forEach(enemy => {
       const dist = Phaser.Math.Distance.Between(x, y, enemy.x, enemy.y);
 

@@ -2,7 +2,7 @@
  * Main game configuration constants
  */
 export const GAME_CONFIG = {
-  DEBUG: false,
+  DEBUG: true,
   PLAYER: {
     SPEED: 120,
     SCALE: 2,

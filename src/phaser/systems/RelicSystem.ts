@@ -15,12 +15,13 @@ export class RelicSystem {
   private isAnimationComplete: boolean = false;
   private gameUI: GameUI;
   private spaceKey: Phaser.Input.Keyboard.Key | null = null;
+  private isStressTestMode: boolean = false;
 
-  constructor(scene: Phaser.Scene, player: Player, gameUI: GameUI) {
+  constructor(scene: Phaser.Scene, player: Player, gameUI: GameUI, upgradeSystem: UpgradeSystem) {
     this.scene = scene;
     this.player = player;
     this.gameUI = gameUI;
-    this.upgradeSystem = new UpgradeSystem(scene, player);
+    this.upgradeSystem = upgradeSystem;
     this.activeRelics = this.scene.physics.add.group({
       classType: Phaser.Physics.Arcade.Sprite,
       runChildUpdate: true
@@ -38,23 +39,20 @@ export class RelicSystem {
       .filter(upgrade => upgrade.isRelic && upgrade.isAvailable?.(this.player))
       .map(relic => relic.id);
     
-    console.log("RelicSystem initialized with available relics:", this.availableRelicIds);
-    console.log("All upgrades:", this.upgradeSystem.getAllUpgrades().map(u => ({ id: u.id, name: u.name, isRelic: u.isRelic, available: u.isAvailable?.(this.player) })));
   }
 
   /**
    * Spawn a relic chest at the specified position with floating arrow
    */
   private spawnRelic(x: number, y: number): void {
-    console.log("RelicSystem.spawnRelic called at:", x, y);
-    console.log("Available relics:", this.availableRelicIds);
+    //console.log("RelicSystem.spawnRelic called at:", x, y);
+    //console.log("Available relics:", this.availableRelicIds);
     
     if (this.availableRelicIds.length === 0) {
       console.warn("No relics available to drop.");
       return;
     }
 
-    console.log("Spawning relic chest at:", x, y);
 
     // Create chest sprite
     const chest = this.scene.physics.add.sprite(x, y, 'chest');
@@ -73,10 +71,13 @@ export class RelicSystem {
     this.activeRelics.add(chest);
 
     // Create floating arrow above chest
-    const arrow = this.scene.add.sprite(x, y - 30, 'relic_icon');
-    arrow.setScale(0.8);
+    const arrow = this.scene.add.sprite(x, y - 30, 'arrow');
+    arrow.setScale(3.2); // Much bigger arrow
     arrow.setDepth(6);
     arrow.setTint(0xffd700); // Golden color
+    
+    // Store arrow reference on chest so it can be destroyed on pickup
+    chest.setData('arrow', arrow);
     
     // Floating animation for arrow
     this.scene.tweens.add({
@@ -119,7 +120,7 @@ export class RelicSystem {
   /**
    * Handle relic pickup collision
    */
-  private handleRelicPickup(chest: Phaser.Types.Physics.Arcade.GameObjectWithBody, _player: Phaser.Types.Physics.Arcade.GameObjectWithBody): void {
+  private handleRelicPickup(player: Phaser.Types.Physics.Arcade.GameObjectWithBody, chest: Phaser.Types.Physics.Arcade.GameObjectWithBody): void {
     const chestSprite = chest as Phaser.Physics.Arcade.Sprite;
     this.collectRelic(chestSprite);
   }
@@ -137,10 +138,19 @@ export class RelicSystem {
     this.selectedRelicId = null; // Reset for new relic selection
     this.isAnimationComplete = false; // Reset animation state
 
-    // Remove the chest from the world after collection
+    // Emit relic collection particle effect
+    this.scene.events.emit('relic-collected', chest.x, chest.y);
+
+    // Destroy the floating arrow
+    const arrow = chest.getData('arrow');
+    if (arrow) {
+      arrow.destroy();
+    }
+    
+    // Hide chest instead of destroying it to prevent player sprite issues
     chest.destroy();
 
-    // Pause the game completely to prevent damage during relic screen
+    // Pause the game exactly like level up
     this.scene.physics.pause();
     this.scene.time.paused = true;
 
@@ -152,7 +162,6 @@ export class RelicSystem {
    * Show slot machine-style relic selection screen
    */
   private showRelicSelectionScreen(_x: number, _y: number): void {
-    console.log("showRelicSelectionScreen called");
     const centerX = this.scene.cameras.main.centerX;
     const centerY = this.scene.cameras.main.centerY;
 
@@ -180,12 +189,8 @@ export class RelicSystem {
     relicDisplay.setTint(0xffffff); // Make sure it's visible
     relicDisplay.setAlpha(1); // Ensure full opacity
     
-    console.log("Created relic display sprite, frame count:", relicDisplay.texture.frameTotal);
-    console.log("Relic display position:", centerX, centerY + 50);
-    
-    // Test: Show a specific frame to make sure spritesheet is working
+    // Show a specific frame to make sure spritesheet is working
     relicDisplay.setFrame(0);
-    console.log("Set initial frame to 0");
 
     // Create instruction text
     const instruction = this.scene.add.text(centerX, centerY + 200, 'Press SPACE to claim your relic!', {
@@ -195,22 +200,26 @@ export class RelicSystem {
       strokeThickness: 2
     }).setOrigin(0.5).setDepth(3001).setScrollFactor(0);
 
-    // Start slot machine animation
-    this.startSlotMachineAnimation(relicDisplay, () => {
-      // Animation complete - show final relic
-      console.log("Animation complete callback called - about to call showFinalRelic");
+    // Check if in stress test mode - skip animation for faster testing
+    if (this.isStressTestMode) {
+      // Skip animation, immediately show final relic
       this.isAnimationComplete = true;
       this.showFinalRelic(relicDisplay, overlay, title, chestSprite, instruction);
-    });
+    } else {
+      // Start slot machine animation
+      this.startSlotMachineAnimation(relicDisplay, () => {
+        // Animation complete - show final relic
+        this.isAnimationComplete = true;
+        this.showFinalRelic(relicDisplay, overlay, title, chestSprite, instruction);
+      });
+    }
+    
 
     // Add space key listener
     this.spaceKey = this.scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE) || null;
     this.spaceKey?.on('down', () => {
       if (this.isShowingRelicScreen && this.isAnimationComplete) {
-        console.log("Space key pressed - claiming relic");
         this.claimRelic(relicDisplay, overlay, title, chestSprite, instruction);
-      } else if (this.isShowingRelicScreen && !this.isAnimationComplete) {
-        console.log("Space key pressed but animation not complete yet");
       }
     });
   }
@@ -219,7 +228,6 @@ export class RelicSystem {
    * Start slot machine animation cycling through relics
    */
   private startSlotMachineAnimation(relicDisplay: Phaser.GameObjects.Sprite, onComplete: () => void): void {
-    console.log("Starting slot machine animation");
     let currentFrame = 0;
     const totalFrames = 60; // Total relics in spritesheet
     let animationSpeed = 50; // Much faster initial speed
@@ -227,23 +235,15 @@ export class RelicSystem {
     let frameCount = 0;
     const totalFramesToShow = maxCycles * totalFrames + Math.floor(totalFrames * 0.3); // Show 1.3 cycles
     
-    console.log("Animation parameters:", {
-      totalFrames,
-      maxCycles,
-      totalFramesToShow,
-      initialSpeed: animationSpeed
-    });
 
     const animate = () => {
       if (frameCount >= totalFramesToShow) {
-        console.log("Slot machine animation complete");
         onComplete();
         return;
       }
 
       relicDisplay.setFrame(currentFrame);
       if (frameCount % 30 === 0) { // Log every 30 frames
-        console.log(`Animation frame ${frameCount}: showing frame ${currentFrame}`);
       }
       currentFrame = (currentFrame + 1) % totalFrames;
       frameCount++;
@@ -270,22 +270,18 @@ export class RelicSystem {
    * Show the final selected relic
    */
   private showFinalRelic(relicDisplay: Phaser.GameObjects.Sprite, _overlay: Phaser.GameObjects.Rectangle, _title: Phaser.GameObjects.Text, _chestSprite: Phaser.GameObjects.Sprite, instruction: Phaser.GameObjects.Text): void {
-    console.log("showFinalRelic called, availableRelicIds:", this.availableRelicIds);
     
     // Select random relic using a more reliable method
     const randomIndex = Math.floor(Math.random() * this.availableRelicIds.length);
     const randomRelicId = this.availableRelicIds[randomIndex];
-    console.log("Selected relic ID:", randomRelicId, "at index:", randomIndex);
     
     const relicUpgrade = this.upgradeSystem.getUpgradeById(randomRelicId);
 
     if (!relicUpgrade) {
       console.error(`Relic upgrade with ID ${randomRelicId} not found.`);
-      console.log("Available upgrades:", this.upgradeSystem.getAllUpgrades().map(u => u.id));
       return;
     }
 
-    console.log("Found relic upgrade:", relicUpgrade.name);
 
     // Map relic ID to a specific frame (for now, use modulo to distribute across frames)
     const relicIndex = this.availableRelicIds.indexOf(randomRelicId);
@@ -324,7 +320,9 @@ export class RelicSystem {
 
     // Store the selected relic for claiming
     this.selectedRelicId = randomRelicId;
-    console.log("showFinalRelic: stored selectedRelicId:", randomRelicId, "in class property");
+    
+    // Store glow reference so it can be destroyed later
+    relicDisplay.setData('glow', glow);
   }
 
   /**
@@ -333,7 +331,6 @@ export class RelicSystem {
   private claimRelic(relicDisplay: Phaser.GameObjects.Sprite, overlay: Phaser.GameObjects.Rectangle, title: Phaser.GameObjects.Text, chestSprite: Phaser.GameObjects.Sprite, instruction: Phaser.GameObjects.Text): void {
     // Get the selected relic ID that was stored during showFinalRelic
     const selectedRelicId = this.selectedRelicId;
-    console.log("claimRelic called, selectedRelicId:", selectedRelicId);
     
     if (!selectedRelicId) {
       console.error("No relic selected - selectedRelicId is null");
@@ -351,14 +348,18 @@ export class RelicSystem {
     this.upgradeSystem.applyUpgrade(selectedRelicId);
 
     // Clean up screen elements
-    console.log("Destroying relic screen elements...");
-    console.log("relicDisplay before destroy:", relicDisplay.active, relicDisplay.visible);
     overlay.destroy();
     title.destroy();
     chestSprite.destroy();
     instruction.destroy();
+    
+    // Destroy glow effect if it exists
+    const glow = relicDisplay.getData('glow');
+    if (glow) {
+      glow.destroy();
+    }
+    
     relicDisplay.destroy();
-    console.log("All relic screen elements destroyed");
 
     // Clean up any running animation
     if (this.animationTimeoutId !== null) {
@@ -366,20 +367,14 @@ export class RelicSystem {
       this.animationTimeoutId = null;
     }
 
-    // Resume game completely
+    // Resume game exactly like level up
     this.scene.physics.resume();
     this.scene.time.paused = false;
     this.isShowingRelicScreen = false;
     this.selectedRelicId = null; // Reset for next relic
-
-    // Show collection effect - removed floating effect, will show in UI instead
-    // this.showRelicCollectedEffect(this.player.getSprite().x, this.player.getSprite().y, relicUpgrade.name);
     
-    // Show relic in UI instead
-    console.log("Calling gameUI.showRelic with:", relicUpgrade.name, relicUpgrade.description);
-    console.log("gameUI object:", this.gameUI);
-    console.log("gameUI.showRelic method:", typeof this.gameUI.showRelic);
-    this.gameUI.showRelic(selectedRelicId, relicUpgrade.name, relicUpgrade.description);
+    // Relic applied successfully
+    // Note: Relic display in corner removed for now
 
     // Remove space key listener
     if (this.spaceKey) {
@@ -388,6 +383,13 @@ export class RelicSystem {
     }
   }
 
+
+  /**
+   * Set stress test mode (skips slot animation for faster testing)
+   */
+  setStressTestMode(enabled: boolean): void {
+    this.isStressTestMode = enabled;
+  }
 
   cleanup(): void {
     this.scene.events.off('relic-dropped', this.spawnRelic, this);

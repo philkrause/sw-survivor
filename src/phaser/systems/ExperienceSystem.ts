@@ -295,4 +295,30 @@ export class ExperienceSystem {
       this.deactivateOrb(orb);
     }
   }
+
+  /**
+   * Apply stress test configuration
+   */
+  setStressTestConfig(config: {
+    maxCount: number;
+  }): void {
+    // Update max count
+    if (config.maxCount > this.experienceOrbs.maxSize) {
+      this.experienceOrbs.maxSize = config.maxCount;
+    }
+  }
+
+  /**
+   * Get current experience orb count
+   */
+  getOrbCount(): number {
+    return this.activeOrbs.size;
+  }
+
+  /**
+   * Get total experience orb count including inactive
+   */
+  getTotalOrbCount(): number {
+    return this.experienceOrbs.children.size;
+  }
 } 

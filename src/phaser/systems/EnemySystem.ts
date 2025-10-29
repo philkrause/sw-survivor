@@ -26,6 +26,7 @@ export class EnemySystem {
 
   // Health bars for enemies
   private healthBars: Map<Phaser.Physics.Arcade.Sprite, Phaser.GameObjects.Graphics> = new Map();
+  private healthBarsEnabled: boolean = true;
 
   // Buffer to avoid allocations in update loop
   private vectorBuffer = { x: 0, y: 0 };
@@ -86,7 +87,7 @@ export class EnemySystem {
   }
 
   public static setupEnemyAnimations(scene: Phaser.Scene) {
-    console.log("Setting up enemy animations");
+    //console.log("Setting up enemy animations");
     scene.anims.create({
       key: 'storm',
       frames: scene.anims.generateFrameNumbers('storm', { start: 0, end: 2 }),
@@ -100,6 +101,7 @@ export class EnemySystem {
       frameRate: 8,
       repeat: -1
     });
+
 
 
   }
@@ -220,7 +222,6 @@ export class EnemySystem {
     type = Phaser.Utils.Array.GetRandom(this.enemyTypes);
     
     if(GAME_CONFIG.DEBUG) {
-      console.log("Spawning enemy of type: " + type);
     }
 
     this.spawnZones = this.createSpawnZones()
@@ -398,7 +399,7 @@ export class EnemySystem {
           this.offscreenTimers.set(enemy, newElapsed);
 
           if (newElapsed > 50) {
-            console.log("ENEMY OFF SCREEN AND DEACTIVATING")
+            //console.log("ENEMY OFF SCREEN AND DEACTIVATING")
             this.deactivateEnemy(enemy);
             this.offscreenTimers.delete(enemy);
             this.activeEnemies.delete(enemy);
@@ -499,7 +500,11 @@ export class EnemySystem {
     if (!enemy.active) return false;
 
     (enemy as any).health -= damage;
-    this.updateHealthBar(enemy);
+    
+    // Only update health bar if enabled
+    if (this.healthBarsEnabled) {
+      this.updateHealthBar(enemy);
+    }
 
     if ((enemy as any).health <= 0) {
       this.showDamageNumber(this.scene, enemy.x, enemy.y - 10, damage, isCritical);
@@ -571,8 +576,8 @@ export class EnemySystem {
    */
   public dropRelic(enemy: Phaser.Physics.Arcade.Sprite): void {
     // 3% chance to drop a relic from regular enemies
-    if (Math.random() < 0.3) {
-      console.log("Regular enemy dropping relic at:", enemy.x, enemy.y);
+    if (Math.random() < 0.03) {
+      //console.log("Regular enemy dropping relic at:", enemy.x, enemy.y);
       this.scene.events.emit('relic-dropped', enemy.x, enemy.y);
     }
   }
@@ -581,19 +586,8 @@ export class EnemySystem {
    * Create a visual effect when an enemy is defeated
    */
   private createDeathEffect(x: number, y: number): void {
-    // Create particles for death effect
-    const particles = this.scene.add.particles(x, y, GAME_CONFIG.EXPERIENCE_ORB.KEY, {
-      speed: { min: 50, max: 100 },
-      scale: { start: 0.2, end: 0 },
-      quantity: 5,
-      lifespan: 500,
-      tint: 0xFFD700
-    });
-
-    // Auto-destroy after animation completes
-    this.scene.time.delayedCall(500, () => {
-      particles.destroy();
-    });
+    // Emit event for particle effects system to handle
+    this.scene.events.emit('enemy-death', x, y, 'stormtrooper');
   }
 
   /**
@@ -712,5 +706,47 @@ export class EnemySystem {
    */
   setTarget(target: Phaser.Physics.Arcade.Sprite): void {
     this.target = target;
+  }
+
+  /**
+   * Apply stress test configuration
+   */
+  setStressTestConfig(config: {
+    spawnInterval: number;
+    maxCount: number;
+    healthBarsEnabled: boolean;
+  }): void {
+    // Update spawn timer
+    if (this.spawnTimer) {
+      this.spawnTimer.destroy();
+    }
+    this.spawnTimer = this.scene.time.addEvent({
+      delay: config.spawnInterval,
+      callback: this.spawnEnemy,
+      callbackScope: this,
+      loop: true
+    });
+
+    // Update max count (resize group if needed)
+    if (config.maxCount > this.enemies.maxSize) {
+      this.enemies.maxSize = config.maxCount;
+    }
+
+    // Store health bars setting for use in damageEnemy
+    this.healthBarsEnabled = config.healthBarsEnabled;
+  }
+
+  /**
+   * Get current enemy count
+   */
+  getEnemyCount(): number {
+    return this.activeEnemies.size;
+  }
+
+  /**
+   * Get total enemy count including inactive
+   */
+  getTotalEnemyCount(): number {
+    return this.enemies.children.size;
   }
 } 
