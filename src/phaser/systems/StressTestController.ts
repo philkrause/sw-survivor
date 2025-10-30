@@ -105,6 +105,21 @@ export class StressTestController {
     this.updateUI();
   }
 
+  public ensureUIVisible(): void {
+    // Recreate texts if they were destroyed by overlays/pauses
+    if (!this.stressTestText || !(this.stressTestText as any).scene) {
+      this.createUI();
+      return;
+    }
+    this.stressTestText.setVisible(true).setDepth(5000).setScrollFactor(0);
+    if (!this.controlsText || !(this.controlsText as any).scene) {
+      this.createUI();
+      return;
+    }
+    this.controlsText.setVisible(true).setDepth(5000).setScrollFactor(0);
+    this.updateUI();
+  }
+
   private updateUI(): void {
     if (this.isStressTestMode) {
       const config = STRESS_TEST_CONFIGS[this.currentLevel];

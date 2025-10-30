@@ -160,12 +160,12 @@ export class UpgradeSystem {
     this.availableUpgrades.push({
       id: 'r2d2_damage',
       name: 'Droid Combat Protocols',
-      description: "Increase R2-D2 damage.",
+      description: "Increase R2-D2 damage by 25%.",
       icon: 'r2d2_icon',
       level: 0,
       maxLevel: 5,
       apply: (player) => {
-        player.increaseR2D2Damage(1.25);
+        player.increaseR2D2Damage(.25);
       },
       isAvailable: (player) => player.hasR2D2Ability()
     });
@@ -287,20 +287,6 @@ export class UpgradeSystem {
     });
 
     this.availableUpgrades.push({
-      id: 'blaster_mod',
-      name: 'Blaster Modification',
-      description: 'A modification that increases blaster damage by 20%',
-      icon: 'blaster_mod_icon',
-      level: 0,
-      maxLevel: 1,
-      apply: (player) => {
-        player.increaseBlasterDamage(0.20);
-      },
-      isAvailable: (player) => player.hasBlasterAbility(),
-      isRelic: true
-    });
-
-    this.availableUpgrades.push({
       id: 'r2d2_upgrade',
       name: 'R2-D2 Enhancement',
       description: 'An enhancement that increases R2-D2 damage by 30%',
@@ -390,12 +376,14 @@ export class UpgradeSystem {
    * Get a random selection of upgrades to choose from
    */
   getRandomUpgrades(count: number = 4): Upgrade[] {
-    // Filter upgrades that haven't reached max level
+    // Filter upgrades that haven't reached max level and are NOT relics
     const availableUpgrades = this.availableUpgrades.filter(upgrade => {
       const currentLevel = this.acquiredUpgrades.get(upgrade.id) || 0;
       //check if the upgrade is available
       const isUnlocked = upgrade.isAvailable ? upgrade.isAvailable(this.player) : true;
-      return currentLevel < upgrade.maxLevel && isUnlocked;
+      // Exclude relics from level-up screen (relics are only available from relic chests)
+      const isNotRelic = !upgrade.isRelic;
+      return currentLevel < upgrade.maxLevel && isUnlocked && isNotRelic;
     });
 
     // If no upgrades available, return empty array

@@ -541,6 +541,7 @@ export class Player {
 
     // Check if player is defeated
     if (this.health <= 0 && this.dead === false) {
+      
       // Handle player defeat
       this.onDefeat();
       this.dead = true; // Set dead flag to prevent multiple defeats
@@ -587,14 +588,18 @@ export class Player {
    * Handle player defeat
    */
   private onDefeat(): void {
+
+    console.log("Player defeated");
     // Stop player movement
     if (this.sprite && this.sprite.body) {
+      console.log("Destroying player sprite");
       this.sprite.setVelocity(0, 0);
     }
     const cam = this.scene.cameras.main
     //death animation
     this.deathVisual();
    
+    // Hide the player sprite (original behavior)
     this.sprite.setActive(false).setVisible(false);
 
     this.scene.add.text(
@@ -742,7 +747,7 @@ isDead(): boolean {
       this.level++;
 
       // Calculate new experience threshold (increases with each level)
-      this.experienceToNextLevel = Math.floor(this.experienceToNextLevel * 1.8);
+      this.experienceToNextLevel = Math.floor(this.experienceToNextLevel * 1.4);
 
       // Visual feedback
       this.showLevelUpEffect();
@@ -1192,6 +1197,17 @@ deathVisual(): void {
 
 
   update(): void {
+
+  // Stop all player logic if defeated
+  if (this.dead) {
+    console.log("Player is dead, stopping update");
+    if (this.sprite && this.sprite.body) {
+      this.sprite.setActive(false);
+      this.sprite.setVisible(false);
+      this.sprite.setVelocity(0, 0);
+    }
+    return;
+  }
 
   // Skip update if player is in level-up state
   if(this.isLevelingUp) {

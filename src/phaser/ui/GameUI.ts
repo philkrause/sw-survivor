@@ -35,6 +35,24 @@ export class GameUI {
     // Listen for level up events
     this.scene.events.on('player-level-up', this.onPlayerLevelUp, this);
   }
+
+  /** Ensure core UI elements are visible and recreated if needed */
+  public ensureUIVisible(): void {
+    if (!this.healthBar || !(this.healthBar as any).scene) {
+      this.healthBar = this.createHealthBar();
+    }
+    if (!this.experienceBar || !(this.experienceBar as any).scene) {
+      this.experienceBar = this.createExperienceBar();
+    }
+    this.healthBar.setVisible(true);
+    this.experienceBar.setVisible(true);
+    // Keep relic display and timer visible as appropriate
+    if (this.gameTimer && (this.gameTimer as any).scene) {
+      this.gameTimer.setVisible(true);
+    } else {
+      this.gameTimer = this.createGameTimer();
+    }
+  }
   
   /**
    * Create instruction text for the player
@@ -416,7 +434,13 @@ export class GameUI {
    * Update the game timer
    */
   public updateTimer(): void {
-    if (!this.gameTimer) return;
+    // Safeguard: recreate timer text if it was destroyed during pause UI
+    if (!this.gameTimer || !(this.gameTimer as any).scene) {
+      this.gameTimer = this.createGameTimer();
+    }
+    if (!this.gameTimer.active) {
+      return;
+    }
     
     const elapsedTime = this.scene.time.now - this.startTime;
     const minutes = Math.floor(elapsedTime / 60000);

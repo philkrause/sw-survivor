@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { ExperienceSystem } from './ExperienceSystem';
 import { Player } from '../entities/Player';
+import { GAME_CONFIG } from '../config/GameConfig';
 
 /**
  * System responsible for AT enemy spawning, movement, and management
@@ -377,7 +378,15 @@ export class AtEnemySystem {
    */
   private dropExperience(enemy: Phaser.Physics.Arcade.Sprite): void {
     if (this.experienceSystem) {
-      this.experienceSystem.spawnOrb(enemy.x, enemy.y); // Spawn experience orb
+      // Spawn multiple orbs with small spread so they don't stack
+      const numOrbs = 5;
+      for (let i = 0; i < numOrbs; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const radius = 6 + Math.random() * 18; // 6..24px
+        const ox = Math.cos(angle) * radius;
+        const oy = Math.sin(angle) * radius;
+        this.experienceSystem.spawnOrb(enemy.x + ox, enemy.y + oy);
+      }
     }
   }
 
@@ -385,8 +394,8 @@ export class AtEnemySystem {
    * Drop relic when enemy dies
    */
   private dropRelic(enemy: Phaser.Physics.Arcade.Sprite): void {
-    // 15% chance to drop a relic from AT enemies (higher than regular enemies)
-    if (Math.random() < 0.15) {
+    // Configurable chance to drop a relic from AT enemies
+    if (Math.random() < GAME_CONFIG.AT.RELIC_DROP_CHANCE) {
       this.scene.events.emit('relic-dropped', enemy.x, enemy.y);
     }
   }

@@ -14,7 +14,7 @@ export default class StartScene extends Phaser.Scene {
   }
 
   preload() {
-    console.log('📦 preload StartScene');
+    //console.log('📦 preload StartScene');
     this.load.image('starfield', '../../../assets/images/game/startmenu_back.png');
     this.load.image('darthback', '../../../assets/images/game/darth_back.png');
   }
@@ -32,7 +32,7 @@ export default class StartScene extends Phaser.Scene {
       onClose: () => this.closeOptions()
     });
 
-    console.log('🎬 create StartScene');
+    //console.log('🎬 create StartScene');
 
     const darthimage = this.add.image(this.scale.width/8, 0, 'darthback')
       .setOrigin(0) 
@@ -52,7 +52,7 @@ export default class StartScene extends Phaser.Scene {
     // Yellow Star Wars text
     // Wait for StarJedi font to fully load before adding text
     document.fonts.load('64px StarJedi').then(() => {
-      console.log('✅ StarJedi font ready');
+      //console.log('✅ StarJedi font ready');
 
       this.add.text(this.scale.width / 2, 100, 'star wars', {
         fontFamily: 'StarJedi',
@@ -74,10 +74,10 @@ export default class StartScene extends Phaser.Scene {
 
 
       // Start Button
-      const startButton = this.add.text(this.scale.width / 2, 500, 'START', {
+      const startButton = this.add.text(this.scale.width / 2, 500, 'start', {
         fontFamily: 'StarJedi',
         fontSize: '64px',
-        color: '#ffff00',
+        color: '#ffffff',
         stroke: '#000',
         strokeThickness: 8,
         align: 'center'
@@ -87,7 +87,7 @@ export default class StartScene extends Phaser.Scene {
       const optionsButton = this.add.text(this.scale.width / 2, 600, 'options', {
         fontFamily: 'StarJedi',
         fontSize: '64px',
-        color: '#ffff00',
+        color: '#ffffff',
         stroke: '#000',
         strokeThickness: 8,
         align: 'center'
@@ -104,11 +104,11 @@ export default class StartScene extends Phaser.Scene {
         this.showOptions();
       });
 
-      // Hover effects
-      startButton.on('pointerover', () => startButton.setStyle({ backgroundColor: '#444' }));
-      startButton.on('pointerout', () => startButton.setStyle({ backgroundColor: '' }));
-      optionsButton.on('pointerover', () => optionsButton.setStyle({ backgroundColor: '#444' }));
-      optionsButton.on('pointerout', () => optionsButton.setStyle({ backgroundColor: '' }));
+      // Hover effects: white default, yellow highlight
+      startButton.on('pointerover', () => startButton.setStyle({ color: '#ffff00' }));
+      startButton.on('pointerout', () => startButton.setStyle({ color: '#ffffff' }));
+      optionsButton.on('pointerover', () => optionsButton.setStyle({ color: '#ffff00' }));
+      optionsButton.on('pointerout', () => optionsButton.setStyle({ color: '#ffffff' }));
     });
 
   }

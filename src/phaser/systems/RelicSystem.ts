@@ -16,6 +16,17 @@ export class RelicSystem {
   private gameUI: GameUI;
   private spaceKey: Phaser.Input.Keyboard.Key | null = null;
   private isStressTestMode: boolean = false;
+  // Baby Yoda fountain state
+  private yodaSprites: Phaser.GameObjects.Image[] = [];
+  private yodaTimers: number[] = [];
+  private yodaLoopActive: boolean = false;
+  // Animation early-stop state
+  private currentAnimationComplete: (() => void) | null = null;
+  private currentRelicDisplay: Phaser.GameObjects.Sprite | null = null;
+  private currentOverlay: Phaser.GameObjects.Rectangle | null = null;
+  private currentTitle: Phaser.GameObjects.Text | null = null;
+  private currentChestSprite: Phaser.GameObjects.Sprite | null = null;
+  private currentInstruction: Phaser.GameObjects.Text | null = null;
 
   constructor(scene: Phaser.Scene, player: Player, gameUI: GameUI, upgradeSystem: UpgradeSystem) {
     this.scene = scene;
@@ -31,6 +42,93 @@ export class RelicSystem {
     this.scene.physics.add.overlap(this.player.getSprite(), this.activeRelics, this.handleRelicPickup as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback, undefined, this);
 
     this.initializeAvailableRelics();
+  }
+
+  // Public flag for MainScene to know if selection UI is open
+  public isScreenOpen(): boolean {
+    return this.isShowingRelicScreen;
+  }
+
+  // --- Baby Yoda fountain effect ---
+  private startYodaFountain(originX: number, originY: number): void {
+    if (!this.scene.textures.exists('byoda')) {
+      console.warn('Texture key "byoda" not found; skipping fountain.');
+      return;
+    }
+    const count = 42; // number of sprites to spray
+    const gravity = 0.22; // manual gravity per tick
+    const lifetimeMs = 1800; // lifespan per sprite
+    const dt = 16; // ms per update step
+    for (let i = 0; i < count; i++) {
+      // Aim mostly straight up with a wider spread
+      const baseAngle = -Math.PI / 2; // straight up
+      const spread = Math.PI * 0.8; // +/- ~72 degrees
+      const angle = baseAngle + (Math.random() - 0.5) * spread;
+      const speed = 3.0 + Math.random() * 10.0; // initial speed
+      // Allow a bit more horizontal component for width
+      const vx0 = Math.cos(angle) * speed * 0.5;
+      const vy0 = Math.sin(angle) * speed - 4.0; // upward bias (negative y)
+
+      const sprite = this.scene.add.image(originX, originY, 'byoda')
+        .setScale(1.2)  
+        .setDepth(3002) // below relic display (3003) so the slot animation stays visible
+        .setScrollFactor(0)
+        .setAlpha(1.0);
+
+      this.yodaSprites.push(sprite);
+
+      let vx = vx0;
+      let vy = vy0;
+      let elapsed = 0;
+
+      const step = () => {
+        // Manual step so it runs while scene.time is paused
+        elapsed += dt;
+        // update position
+        sprite.x += vx;
+        sprite.y += vy;
+        // gravity
+        vy += gravity;
+        // shrink and fade
+        sprite.scale *= 0.987;
+        sprite.alpha *= 0.987;
+
+        if (elapsed >= lifetimeMs || sprite.scale < 0.06 || sprite.alpha < 0.06) {
+          sprite.destroy();
+          return;
+        }
+        const timerId = window.setTimeout(step, dt);
+        this.yodaTimers.push(timerId);
+      };
+
+      const timerId = window.setTimeout(step, dt);
+      this.yodaTimers.push(timerId);
+    }
+  }
+
+  private stopYodaFountain(): void {
+    // clear timers
+    this.yodaTimers.forEach(id => window.clearTimeout(id));
+    this.yodaTimers = [];
+    this.yodaLoopActive = false;
+    // destroy any remaining sprites
+    this.yodaSprites.forEach(s => s.destroy());
+    this.yodaSprites = [];
+  }
+
+  private startYodaFountainLoop(originX: number, originY: number): void {
+    this.yodaLoopActive = true;
+    const loop = () => {
+      if (!this.isShowingRelicScreen || !this.yodaLoopActive) {
+        return;
+      }
+      // spawn one burst
+      this.startYodaFountain(originX, originY);
+      // schedule next burst
+      const id = window.setTimeout(loop, 220);
+      this.yodaTimers.push(id);
+    };
+    loop();
   }
 
   private initializeAvailableRelics(): void {
@@ -56,7 +154,7 @@ export class RelicSystem {
 
     // Create chest sprite
     const chest = this.scene.physics.add.sprite(x, y, 'chest');
-    chest.setScale(1.2);
+    chest.setScale(1.8);
     chest.setDepth(5);
     
     // Add physics body
@@ -177,13 +275,16 @@ export class RelicSystem {
       strokeThickness: 4
     }).setOrigin(0.5).setDepth(3001).setScrollFactor(0);
 
-    // Create chest below relic display
-    const chestSprite = this.scene.add.sprite(centerX, centerY + 120, 'chest_open');
+    // Create chest a bit higher so it doesn't cover the text below
+    const chestSprite = this.scene.add.sprite(centerX, centerY + 140, 'chest_open');
     chestSprite.setScale(2);
     chestSprite.setDepth(3002).setScrollFactor(0);
 
+    // Start Baby Yoda fountain loop from chest
+    this.startYodaFountainLoop(chestSprite.x, chestSprite.y - 20);
+
     // Create relic display area
-    const relicDisplay = this.scene.add.sprite(centerX, centerY + 50, 'relics');
+    const relicDisplay = this.scene.add.sprite(centerX, centerY + 30, 'relics');
     relicDisplay.setScale(4);
     relicDisplay.setDepth(3003).setScrollFactor(0);
     relicDisplay.setTint(0xffffff); // Make sure it's visible
@@ -193,33 +294,73 @@ export class RelicSystem {
     relicDisplay.setFrame(0);
 
     // Create instruction text
-    const instruction = this.scene.add.text(centerX, centerY + 200, 'Press SPACE to claim your relic!', {
+    const instruction = this.scene.add.text(centerX, centerY + 200, 'Press SPACE to stop slot or claim relic!', {
       fontSize: '20px',
       color: '#ffffff',
       stroke: '#000000',
       strokeThickness: 2
     }).setOrigin(0.5).setDepth(3001).setScrollFactor(0);
 
+    // Store references for early stop functionality
+    this.currentRelicDisplay = relicDisplay;
+    this.currentOverlay = overlay;
+    this.currentTitle = title;
+    this.currentChestSprite = chestSprite;
+    this.currentInstruction = instruction;
+
     // Check if in stress test mode - skip animation for faster testing
     if (this.isStressTestMode) {
       // Skip animation, immediately show final relic
       this.isAnimationComplete = true;
+      this.currentAnimationComplete = null; // Clear animation callback
       this.showFinalRelic(relicDisplay, overlay, title, chestSprite, instruction);
     } else {
-      // Start slot machine animation
-      this.startSlotMachineAnimation(relicDisplay, () => {
+      // Create completion callback
+      const onComplete = () => {
         // Animation complete - show final relic
         this.isAnimationComplete = true;
+        this.currentAnimationComplete = null; // Clear animation callback
         this.showFinalRelic(relicDisplay, overlay, title, chestSprite, instruction);
-      });
+      };
+      
+      // Store callback for early stop
+      this.currentAnimationComplete = onComplete;
+      
+      // Start slot machine animation
+      this.startSlotMachineAnimation(relicDisplay, onComplete);
     }
     
 
     // Add space key listener
     this.spaceKey = this.scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE) || null;
     this.spaceKey?.on('down', () => {
-      if (this.isShowingRelicScreen && this.isAnimationComplete) {
-        this.claimRelic(relicDisplay, overlay, title, chestSprite, instruction);
+      if (!this.isShowingRelicScreen) {
+        return;
+      }
+      
+      // If animation is still running, stop it early
+      if (!this.isAnimationComplete && this.currentAnimationComplete) {
+        // Stop the animation
+        if (this.animationTimeoutId !== null) {
+          clearTimeout(this.animationTimeoutId);
+          this.animationTimeoutId = null;
+        }
+        
+        // Immediately complete the animation
+        const onComplete = this.currentAnimationComplete;
+        this.currentAnimationComplete = null;
+        if (onComplete && this.currentRelicDisplay && this.currentOverlay && 
+            this.currentTitle && this.currentChestSprite && this.currentInstruction) {
+          onComplete();
+        }
+        return;
+      }
+      
+      // If animation is complete, claim the relic
+      if (this.isAnimationComplete && this.currentRelicDisplay && this.currentOverlay && 
+          this.currentTitle && this.currentChestSprite && this.currentInstruction) {
+        this.claimRelic(this.currentRelicDisplay, this.currentOverlay, this.currentTitle, 
+                       this.currentChestSprite, this.currentInstruction);
       }
     });
   }
@@ -352,6 +493,7 @@ export class RelicSystem {
     title.destroy();
     chestSprite.destroy();
     instruction.destroy();
+    this.stopYodaFountain();
     
     // Destroy glow effect if it exists
     const glow = relicDisplay.getData('glow');
@@ -372,6 +514,15 @@ export class RelicSystem {
     this.scene.time.paused = false;
     this.isShowingRelicScreen = false;
     this.selectedRelicId = null; // Reset for next relic
+    
+    // Clear stored references
+    this.currentRelicDisplay = null;
+    this.currentOverlay = null;
+    this.currentTitle = null;
+    this.currentChestSprite = null;
+    this.currentInstruction = null;
+    this.currentAnimationComplete = null;
+    this.isAnimationComplete = false;
     
     // Relic applied successfully
     // Note: Relic display in corner removed for now

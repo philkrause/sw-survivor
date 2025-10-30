@@ -51,7 +51,7 @@ export class PauseMenu {
         this.selectMenuItem();
         break;
       case 'Escape':
-        this.options.onResume();
+        // Ignore ESC while pause menu is open to prevent UI conflicts
         break;
     }
   }

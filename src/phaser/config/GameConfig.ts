@@ -36,6 +36,7 @@ export const GAME_CONFIG = {
     KNOCKBACK_FORCE: 300, // Force applied when hit
     KNOCKBACK_DURATION: 200, // ms of knockback effect
     EXPERIENCE_DROP_CHANCE: 1, // Chance (0-1) of dropping an experience orb
+    RELIC_DROP_CHANCE: 0.5, // Chance (0-1) for relic drop on death
     // Per-type overrides (multipliers against MAX_HEALTH)
     TYPES: {
       dune: { HEALTH_MULTIPLIER: 0.25 },
@@ -56,7 +57,11 @@ export const GAME_CONFIG = {
     DAMAGE_TINT: 0xff8800, // Orange tint when damaged
     KNOCKBACK_FORCE: 300, // Force applied when hit
     KNOCKBACK_DURATION: 200, // ms of knockback effect
-    EXPERIENCE_DROP_CHANCE: 1 // Chance (0-1) of dropping an experience orb
+    EXPERIENCE_DROP_CHANCE: 1, // Chance (0-1) of dropping an experience orb
+    RELIC_DROP_CHANCE: 0.08 // Chance (0-1) for relic drop on death
+  },
+  AT: {
+    RELIC_DROP_CHANCE: 0.15
   },
   EXPERIENCE_ORB: {
     KEY: 'experience_orb',

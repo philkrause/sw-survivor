@@ -555,6 +555,19 @@ export default class MainScene extends Phaser.Scene {
 
     // Hide pause menu
     this.pauseMenu.hide();
+
+    // Ensure UI elements reappear
+    if (this.gameUI && (this.gameUI as any).ensureUIVisible) {
+      (this.gameUI as any).ensureUIVisible();
+      // Force a health/exp redraw using current values
+      this.gameUI.updateHealth(this.player.getHealth(), this.player.getMaxHealth());
+      this.gameUI.updateExperience(this.player.getExperience(), this.player.getExperienceToNextLevel());
+    }
+
+    // Ensure stress test UI reappears
+    if (this.stressTestController && (this.stressTestController as any).ensureUIVisible) {
+      (this.stressTestController as any).ensureUIVisible();
+    }
   }
 
   /**
@@ -587,10 +600,10 @@ export default class MainScene extends Phaser.Scene {
       return;
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.escapeKey)) {
-      if (this.isPaused) {
-        this.resumeGame();
-      } else {
+    // Disable ESC while relic screen is open or while paused
+    const relicOpen = this.relicSystem && this.relicSystem.isScreenOpen && this.relicSystem.isScreenOpen();
+    if (!this.isPaused && !relicOpen) {
+      if (Phaser.Input.Keyboard.JustDown(this.escapeKey)) {
         this.pauseGame();
       }
     }

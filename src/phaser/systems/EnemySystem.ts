@@ -558,10 +558,15 @@ export class EnemySystem {
     // Skip if no experience system is set
     if (!this.experienceSystem) return;
 
-    // Check drop chance
-    //if (Math.random() <= GAME_CONFIG.ENEMY.EXPERIENCE_DROP_CHANCE) {
-    // Spawn experience orb at enemy position
-    this.experienceSystem.spawnOrb(enemy.x, enemy.y);
+    // Spawn multiple orbs with small spread so they don't stack
+    const numOrbs = 5;
+    for (let i = 0; i < numOrbs; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 6 + Math.random() * 18; // 6..24px
+      const ox = Math.cos(angle) * radius;
+      const oy = Math.sin(angle) * radius;
+      this.experienceSystem.spawnOrb(enemy.x + ox, enemy.y + oy);
+    }
     // Add a small visual effect
     this.createDeathEffect(enemy.x, enemy.y);
 
@@ -571,8 +576,8 @@ export class EnemySystem {
    * Drop a relic at the enemy's position (rare chance)
    */
   public dropRelic(enemy: Phaser.Physics.Arcade.Sprite): void {
-    // 3% chance to drop a relic from regular enemies
-    if (Math.random() < 0.03) {
+    // Configurable chance to drop a relic from regular enemies
+    if (Math.random() < GAME_CONFIG.ENEMY.RELIC_DROP_CHANCE) {
       //console.log("Regular enemy dropping relic at:", enemy.x, enemy.y);
       this.scene.events.emit('relic-dropped', enemy.x, enemy.y);
     }
