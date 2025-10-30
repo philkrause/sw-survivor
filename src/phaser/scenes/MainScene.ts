@@ -183,6 +183,9 @@ export default class MainScene extends Phaser.Scene {
     this.atEnemySystem.setExperienceSystem(this.experienceSystem);
     this.tfighterSystem.setExperienceSystem(this.experienceSystem);
 
+    // Connect AT enemy system to projectile system for shooting
+    this.atEnemySystem.setProjectileSystem(this.projectileSystem);
+
 
     // Create upgrade system
     this.upgradeSystem = new UpgradeSystem(this, this.player);
@@ -338,6 +341,23 @@ export default class MainScene extends Phaser.Scene {
       this.enemySystem.getEnemyGroup()
     );
     
+    // Set up collision detection for enemy projectiles hitting player
+    const enemyProjectileGroup = this.projectileSystem.getProjectileGroup('enemy_laser');
+    if (enemyProjectileGroup) {
+      this.physics.add.overlap(
+        enemyProjectileGroup,
+        this.player.getSprite(),
+        this.handleEnemyProjectilePlayerCollision as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
+        (player,projectile) => {
+          // Ensure both bodies are active; note: params are in the same order as overlap objs
+          const projActive = (projectile as Phaser.Physics.Arcade.Sprite).active;
+          const plyrActive = (player as Phaser.Physics.Arcade.Sprite).active;
+          return projActive && plyrActive;
+        },
+        this
+      );
+    }
+    
   }
 
   /**
@@ -408,7 +428,27 @@ export default class MainScene extends Phaser.Scene {
     this.projectileSystem.deactivate(p);
   }
 
-  
+  /**
+   * Handle collision between enemy projectile and player
+   */
+  private handleEnemyProjectilePlayerCollision(player: Phaser.Physics.Arcade.Sprite, projectile: Phaser.Physics.Arcade.Sprite): void {
+    // Check if projectile is still active (prevent multiple hits)
+    if (!projectile.active) {
+      return;
+    }
+    
+    // Deactivate the projectile IMMEDIATELY to prevent multiple hits
+    this.projectileSystem.deactivate(projectile);
+    
+    // Deal damage to player
+    const damage = 10; // AT enemy projectile damage
+    this.player.takeDamage(damage);
+    
+    // Emit hit effect
+    this.events.emit('projectile-hit', projectile.x, projectile.y, false);
+  }
+
+    
   /**
    * Check for collisions between player and enemies
    */

@@ -253,16 +253,11 @@ export class EnemySystem {
     // Reset any enemy state that needs resetting
     //enemy.setTint(GAME_CONFIG.ENEMY.TINT);
 
-    // Reset health to max
-    (enemy as any).health = GAME_CONFIG.ENEMY.MAX_HEALTH;
-
-    if (type == "soldier1") {
-      (enemy as any).health = GAME_CONFIG.ENEMY.MAX_HEALTH * 1.2;
-    }
-
-    if (type == "dune") {
-      (enemy as any).health = GAME_CONFIG.ENEMY.MAX_HEALTH * .75;
-    }
+    // Health from config per-type (defaults to 1.0 multiplier)
+    const mult = (GAME_CONFIG.ENEMY.TYPES as any)?.[type]?.HEALTH_MULTIPLIER ?? 1.0;
+    const hp = GAME_CONFIG.ENEMY.MAX_HEALTH * mult;
+    (enemy as any).health = hp;
+    (enemy as any).maxHealth = hp;
 
 
     enemy.setTexture(type);
@@ -318,8 +313,9 @@ export class EnemySystem {
     enemy.setScale(GAME_CONFIG.ENEMY.SCALE);
     enemy.setDepth(GAME_CONFIG.ENEMY.DEPTH);
     //enemy.setCollideWorldBounds(true);
-    // Initialize health property
+    // Initialize health properties
     (enemy as any).health = GAME_CONFIG.ENEMY.MAX_HEALTH;
+    (enemy as any).maxHealth = (enemy as any).health;
 
     if (enemy.body) {
 
@@ -621,7 +617,7 @@ export class EnemySystem {
 
     // Get current health percentage
     const health = (enemy as any).health || 0;
-    const maxHealth = GAME_CONFIG.ENEMY.MAX_HEALTH;
+    const maxHealth = (enemy as any).maxHealth || GAME_CONFIG.ENEMY.MAX_HEALTH;
     const healthPercent = Math.max(0, Math.min(1, health / maxHealth));
 
     // Set health bar dimensions

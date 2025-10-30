@@ -213,11 +213,8 @@ export class ProjectileSystem {
   }
 
   deactivate(projectile: Phaser.Physics.Arcade.Sprite): void {
-    
     if (!projectile.active) {
-      console.log("projectile off screen")
       // If the projectile is already inactive, skip deactivation
-      console.warn(`Attempted to deactivate an already inactive projectile at (${projectile.x}, ${projectile.y})`);
       return;
     }
 
@@ -229,6 +226,21 @@ export class ProjectileSystem {
       projectile.setVelocity(0, 0); // Reset velocity
     }
 
+  }
+
+  /**
+   * Hard-kill a projectile on impact (disable body + hide immediately)
+   */
+  kill(projectile: Phaser.Physics.Arcade.Sprite): void {
+    // Safe path: just disable body and hide, let pool reuse the sprite
+    if ((projectile as any).disableBody) {
+      (projectile as any).disableBody(true, true);
+    }
+    projectile.setActive(false).setVisible(false);
+    if (projectile.body) {
+      projectile.body.enable = false;
+      projectile.setVelocity(0, 0);
+    }
   }
 
   getVisibleProjectiles(): Phaser.Physics.Arcade.Sprite[] {

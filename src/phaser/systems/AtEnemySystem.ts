@@ -32,6 +32,12 @@ export class AtEnemySystem {
   private damage: number = 15; // Higher damage
   private speed: number = 60; // Slower than regular enemies
   private scale: number = 0.4; // Even bigger size (320px -> 128px)
+  
+  // Shooting properties
+  private shootingInterval: number = 3000; // ms between shooting attempts
+  private shootingRange: number = 400; // Distance at which AT will try to shoot (much further)
+  private shootingDuration: number = 1000; // How long AT stays still while shooting
+  private projectileSystem: any = null; // Will be set by MainScene
 
   constructor(scene: Phaser.Scene, target: Phaser.Physics.Arcade.Sprite, _player: Player) {
     this.scene = scene;
@@ -180,6 +186,11 @@ export class AtEnemySystem {
     (enemy as any).damage = this.damage;
     (enemy as any).speed = this.speed;
     (enemy as any).lastDamageTime = 0;
+    
+    // Set shooting properties
+    (enemy as any).isShooting = false;
+    (enemy as any).lastShotTime = 0;
+    (enemy as any).shootingStartTime = 0;
 
     // Start animation
     // Ensure animation exists before trying to play it
@@ -265,10 +276,13 @@ export class AtEnemySystem {
   /**
    * Damage an AT enemy
    */
-  public damageEnemy(enemy: Phaser.Physics.Arcade.Sprite, damage: number, knockbackForce?: number, _isCritical = false): boolean {
+  public damageEnemy(enemy: Phaser.Physics.Arcade.Sprite, damage: number, knockbackForce?: number, isCritical = false): boolean {
     if (!enemy.active) return false;
 
     (enemy as any).health -= damage;
+
+    // Show floating damage number
+    this.showDamageNumber(this.scene, enemy.x, enemy.y - 10, damage, isCritical);
     
     // Only update health bar if enabled
     if (this.healthBarsEnabled) {
@@ -290,11 +304,40 @@ export class AtEnemySystem {
     
     // Check if enemy is dead
     if ((enemy as any).health <= 0) {
+      // Also show number on death for emphasis
+      this.showDamageNumber(this.scene, enemy.x, enemy.y - 10, damage, isCritical);
       this.killEnemy(enemy);
       return true;
     }
     
     return false;
+  }
+
+  /**
+   * Show floating damage number above enemy
+   */
+  private showDamageNumber(scene: Phaser.Scene, x: number, y: number, damage: number, isCritical = false): void {
+    const style: Phaser.Types.GameObjects.Text.TextStyle = {
+      fontSize: '24px',
+      color: isCritical ? '#ff3333' : '#ffffff',
+      stroke: '#000000',
+      strokeThickness: 4,
+      fontFamily: 'Arial'
+    };
+
+    if (!damage) return;
+    const text = scene.add.text(x, y, damage.toString(), style)
+      .setDepth(100)
+      .setOrigin(0.5);
+
+    scene.tweens.add({
+      targets: text,
+      y: y - 20,
+      alpha: 0,
+      duration: 800,
+      ease: 'Cubic.easeOut',
+      onComplete: () => text.destroy()
+    });
   }
 
   /**
@@ -374,23 +417,41 @@ export class AtEnemySystem {
   private updateEnemy(enemy: Phaser.Physics.Arcade.Sprite): void {
     if (!enemy.active) return;
     
-    // Move towards player
+    const currentTime = this.scene.time.now;
     const dx = this.target.x - enemy.x;
     const dy = this.target.y - enemy.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
     
-    if (distance > 0) {
-      const speed = (enemy as any).speed;
-      const moveX = (dx / distance) * speed;
-      const moveY = (dy / distance) * speed;
-      
-      enemy.setVelocity(moveX, moveY);
-      
-      // Flip sprite based on movement direction
-      if (moveX > 0) {
-        enemy.setFlipX(true); // Moving right - flip to face right
-      } else if (moveX < 0) {
-        enemy.setFlipX(false); // Moving left - no flip to face left
+    // Check if enemy should start shooting
+    if (!(enemy as any).isShooting && 
+        distance <= this.shootingRange && 
+        currentTime - (enemy as any).lastShotTime >= this.shootingInterval) {
+      this.startShooting(enemy);
+    }
+    
+    // Handle shooting state
+    if ((enemy as any).isShooting) {
+      if (currentTime - (enemy as any).shootingStartTime >= this.shootingDuration) {
+        this.stopShooting(enemy);
+      } else {
+        // Stay still while shooting
+        enemy.setVelocity(0, 0);
+      }
+    } else {
+      // Normal movement towards player
+      if (distance > 0) {
+        const speed = (enemy as any).speed;
+        const moveX = (dx / distance) * speed;
+        const moveY = (dy / distance) * speed;
+        
+        enemy.setVelocity(moveX, moveY);
+        
+        // Flip sprite based on movement direction
+        if (moveX > 0) {
+          enemy.setFlipX(true); // Moving right - flip to face right
+        } else if (moveX < 0) {
+          enemy.setFlipX(false); // Moving left - no flip to face left
+        }
       }
     }
     
@@ -484,6 +545,59 @@ export class AtEnemySystem {
    */
   public getVisibleEnemies(): Phaser.Physics.Arcade.Sprite[] {
     return this.visibleEnemies;
+  }
+
+  /**
+   * Start shooting state for enemy
+   */
+  private startShooting(enemy: Phaser.Physics.Arcade.Sprite): void {
+    (enemy as any).isShooting = true;
+    (enemy as any).shootingStartTime = this.scene.time.now;
+    (enemy as any).lastShotTime = this.scene.time.now;
+    
+    // Fire projectile
+    this.fireProjectile(enemy);
+  }
+
+  /**
+   * Stop shooting state for enemy
+   */
+  private stopShooting(enemy: Phaser.Physics.Arcade.Sprite): void {
+    (enemy as any).isShooting = false;
+  }
+
+  /**
+   * Fire projectile from enemy
+   */
+  private fireProjectile(enemy: Phaser.Physics.Arcade.Sprite): void {
+    if (!this.projectileSystem) return;
+    
+    const dx = this.target.x - enemy.x;
+    const dy = this.target.y - enemy.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    if (distance > 0) {
+      // Normalize direction
+      const dirX = dx / distance;
+      const dirY = dy / distance;
+      
+      // Fire enemy projectile using enemy laser pool
+      this.projectileSystem.fire(
+        'enemy_laser', // Use enemy laser pool (laser.png texture)
+        enemy.x,
+        enemy.y,
+        dirX,
+        dirY,
+        'enemy_blaster' // Projectile type for enemy shots
+      );
+    }
+  }
+
+  /**
+   * Set projectile system reference for shooting
+   */
+  public setProjectileSystem(projectileSystem: any): void {
+    this.projectileSystem = projectileSystem;
   }
 
   /**

@@ -35,7 +35,13 @@ export const GAME_CONFIG = {
     DAMAGE_TINT: 0xff8800, // Orange tint when damaged
     KNOCKBACK_FORCE: 300, // Force applied when hit
     KNOCKBACK_DURATION: 200, // ms of knockback effect
-    EXPERIENCE_DROP_CHANCE: 1 // Chance (0-1) of dropping an experience orb
+    EXPERIENCE_DROP_CHANCE: 1, // Chance (0-1) of dropping an experience orb
+    // Per-type overrides (multipliers against MAX_HEALTH)
+    TYPES: {
+      dune: { HEALTH_MULTIPLIER: 0.25 },
+      storm: { HEALTH_MULTIPLIER: 1.0 },
+      soldier1: { HEALTH_MULTIPLIER: 1.2 },
+    }
   },
   TFIGHTER: {
     SPEED: 50,
@@ -75,6 +81,18 @@ export const GAME_CONFIG = {
       MAX_COUNT: 50, // increased pool size
       TINT: 0xff0000, // red color
       DEPTH: 3,
+    },
+    ENEMY: {
+      KEY: 'enemy_laser', // Use laser.png texture but with unique key
+      SPEED: 300,
+      LIFESPAN: 3000, // ms - longer lifespan
+      SCALE: 0.8,
+      DAMAGE: 10,
+      ROTATEWITHDIRECTION: true,
+      MAXSIZE: 30, // smaller pool size
+      MAX_COUNT: 30, // smaller pool size
+      TINT: 0xff4444, // slightly different red
+      DEPTH: 2,
     },
   },
   FORCE: {

@@ -220,8 +220,9 @@ export class TfighterSystem {
     if (enemy.body)
       enemy.body.enable = true;// Activate the physics body
 
-    // Reset health to max
+    // Reset health to max and track per-enemy maxHealth for correct bar scaling
     (enemy as any).health = GAME_CONFIG.ENEMY.MAX_HEALTH;
+    (enemy as any).maxHealth = (enemy as any).health;
 
     enemy.setTexture(type);
     
@@ -284,6 +285,7 @@ export class TfighterSystem {
     const scale = 0.1;
     enemy.setDepth(GAME_CONFIG.TFIGHTER.DEPTH);
     (enemy as any).health = GAME_CONFIG.TFIGHTER.MAX_HEALTH;
+    (enemy as any).maxHealth = (enemy as any).health;
 
     // Resize collider box here
     if (enemy.body) {
@@ -496,8 +498,8 @@ export class TfighterSystem {
     healthBar.clear();
 
     // Get current health percentage
-    const health = (enemy as any).health || 50;
-    const maxHealth = GAME_CONFIG.TFIGHTER.MAX_HEALTH;
+    const health = (enemy as any).health || GAME_CONFIG.TFIGHTER.MAX_HEALTH;
+    const maxHealth = (enemy as any).maxHealth || GAME_CONFIG.TFIGHTER.MAX_HEALTH;
     const healthPercent = Math.max(0, Math.min(1, health / maxHealth));
 
     // Set health bar dimensions

@@ -128,6 +128,20 @@ export class Player {
         maxCount: GAME_CONFIG.BLASTER.PLAYER.MAX_COUNT,
         tint: GAME_CONFIG.BLASTER.PLAYER.TINT
       });
+
+      // Create enemy blaster pool
+      this.projectileSystem.createPool({
+        key: GAME_CONFIG.BLASTER.ENEMY.KEY,
+        speed: GAME_CONFIG.BLASTER.ENEMY.SPEED,
+        lifespan: GAME_CONFIG.BLASTER.ENEMY.LIFESPAN,
+        scale: GAME_CONFIG.BLASTER.ENEMY.SCALE,
+        depth: GAME_CONFIG.BLASTER.ENEMY.DEPTH,
+        damage: GAME_CONFIG.BLASTER.ENEMY.DAMAGE,
+        rotateToDirection: GAME_CONFIG.BLASTER.ENEMY.ROTATEWITHDIRECTION,
+        maxSize: GAME_CONFIG.BLASTER.ENEMY.MAX_COUNT,
+        maxCount: GAME_CONFIG.BLASTER.ENEMY.MAX_COUNT,
+        tint: GAME_CONFIG.BLASTER.ENEMY.TINT
+      });
     }
 
 
@@ -313,6 +327,8 @@ export class Player {
     const right = this.wasdKeys.D.isDown || this.cursors.right!.isDown;
     const up = this.wasdKeys.W.isDown || this.cursors.up!.isDown;
     const down = this.wasdKeys.S.isDown || this.cursors.down!.isDown;
+
+
 
     // Determine primary direction for sprite selection
     let primaryDirection = 'right'; // default
@@ -514,8 +530,11 @@ export class Player {
     // Reduce health
     this.health = Math.max(0, this.health - actualDamage);
 
-    // Apply damage visual effect
-    this.sprite.setTint(GAME_CONFIG.PLAYER.DAMAGE_TINT);
+    // Ensure sprite is visible before applying damage effects
+    this.sprite.setVisible(true);
+
+    // Apply damage visual effect - DISABLED FOR DEBUGGING
+    // this.sprite.setTint(GAME_CONFIG.PLAYER.DAMAGE_TINT);
 
     // Make player invulnerable temporarily
     this.setInvulnerable(GAME_CONFIG.PLAYER.INVULNERABLE_DURATION);
@@ -551,6 +570,7 @@ export class Player {
       repeat: Math.floor(duration / 200),
       onComplete: () => {
         this.sprite.alpha = 1;
+        this.sprite.setVisible(true); // Ensure sprite is visible
       }
     });
 
@@ -559,6 +579,7 @@ export class Player {
       this.isInvulnerable = false;
       this.sprite.clearTint();
       this.sprite.alpha = 1;
+      this.sprite.setVisible(true); // Ensure sprite is visible
     });
   }
 
@@ -1179,6 +1200,7 @@ deathVisual(): void {
     }
     return;
   }
+
   
 
   const direction = this.getInputDirection();
@@ -1192,6 +1214,14 @@ deathVisual(): void {
 
     // Apply movement with speed multiplier
     if (this.sprite && this.sprite.body) {
+      // Ensure sprite/body are enabled without logging
+      if (!this.sprite.active) {
+        this.sprite.setActive(true);
+      }
+      if (!this.sprite.body.enable) {
+        this.sprite.body.enable = true;
+      }
+
       this.sprite.setVelocity(
         normalized.x * this.getSpeed(),
         normalized.y * this.getSpeed()
