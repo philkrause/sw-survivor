@@ -2,7 +2,7 @@
  * Main game configuration constants
  */
 export const GAME_CONFIG = {
-  DEBUG: true,
+  DEBUG: false,
   PLAYER: {
     SPEED: 120,
     SCALE: 2,
@@ -13,7 +13,7 @@ export const GAME_CONFIG = {
     DAMAGE_INTERVAL: 500, // ms between damage ticks when overlapping enemies
     DAMAGE_AMOUNT: 5, // Amount of damage taken per tick
     DAMAGE_TINT: 0xff0000, // Red tint when damaged
-    INVULNERABLE_DURATION: 10, // ms of invulnerability after taking damage
+    INVULNERABLE_DURATION: 20, // ms of invulnerability after taking damage
     HEALTH_BAR_WIDTH: 50, // Width of health bar in pixels
     HEALTH_BAR_HEIGHT: 10, // Height of health bar in pixels
     EXPERIENCE: {
@@ -26,22 +26,37 @@ export const GAME_CONFIG = {
     SPEED: 50,
     SCALE: 2,
     DEPTH: 5,
-    SPAWN_INTERVAL: 2000, // ms between spawns
+    SPAWN_INTERVAL: 500, // ms between spawns (base interval)
     MAX_COUNT: 150,
     SPAWN_PADDING: 20, // Distance from edge
     HITBOX_SCALE: .01,
     TINT: 0xff0000,
-    MAX_HEALTH: 25, // Number of hits to defeat an enemy
+    MAX_HEALTH: 50, // Number of hits to defeat an enemy
     DAMAGE_TINT: 0xff8800, // Orange tint when damaged
     KNOCKBACK_FORCE: 300, // Force applied when hit
     KNOCKBACK_DURATION: 200, // ms of knockback effect
     EXPERIENCE_DROP_CHANCE: 1, // Chance (0-1) of dropping an experience orb
-    RELIC_DROP_CHANCE: 0.5, // Chance (0-1) for relic drop on death
+    RELIC_DROP_CHANCE: 0.03, // Chance (0-1) for relic drop on death
+    // Spawn rate scaling
+    LEVEL_SCALING: {
+      REDUCTION_PER_LEVEL: 0.5, // 25% reduction per level
+      MIN_REDUCTION_FACTOR: 0.3, // Minimum 30% of base interval
+    },
+    TIME_SCALING: {
+      REDUCTION_PER_MINUTE: 0.25, // 5% reduction per minute elapsed
+      MAX_REDUCTION: 0.5, // Maximum 50% reduction from time alone
+    },
+    // Enemy type unlocks by level
+    TYPE_UNLOCKS: {
+      dune: 1, // Available from level 1
+      storm: 5, // Unlock at level 2
+      soldier1: 9, // Unlock at level 3
+    },
     // Per-type overrides (multipliers against MAX_HEALTH)
     TYPES: {
       dune: { HEALTH_MULTIPLIER: 0.25 },
-      storm: { HEALTH_MULTIPLIER: 1.0 },
-      soldier1: { HEALTH_MULTIPLIER: 1.2 },
+      storm: { HEALTH_MULTIPLIER: 2.0 },
+      soldier1: { HEALTH_MULTIPLIER: 3.0 },
     }
   },
   TFIGHTER: {
@@ -53,7 +68,7 @@ export const GAME_CONFIG = {
     SPAWN_PADDING: 20, // Distance from edge
     HITBOX_SCALE: 1,
     TINT: 0xff0000,
-    MAX_HEALTH: 50, // Number of hits to defeat an enemy
+    MAX_HEALTH: 100, // Number of hits to defeat an enemy
     DAMAGE_TINT: 0xff8800, // Orange tint when damaged
     KNOCKBACK_FORCE: 300, // Force applied when hit
     KNOCKBACK_DURATION: 200, // ms of knockback effect
@@ -61,6 +76,9 @@ export const GAME_CONFIG = {
     RELIC_DROP_CHANCE: 0.08 // Chance (0-1) for relic drop on death
   },
   AT: {
+    SPAWN_INTERVAL: 2000, // ms between spawns (base interval)
+    MAX_COUNT: 50, // Maximum number of AT enemies at once
+    MIN_LEVEL: 10, // Minimum player level before AT enemies spawn
     RELIC_DROP_CHANCE: 0.15
   },
   EXPERIENCE_ORB: {
@@ -68,7 +86,7 @@ export const GAME_CONFIG = {
     SCALE: 1,
     DEPTH: 3,
     TINT: 0x00ffff, // Cyan color
-    VALUE: 5, // Each orb gives 1 XP, player needs 25 for first level up
+    VALUE: 2, // Each orb gives 1 XP, player needs 25 for first level up
     LIFESPAN: 30000, // ms before disappearing
     MAX_COUNT: 300, // Maximum number of orbs
     PULSE_DURATION: 1000, // ms for pulse animation
@@ -80,7 +98,7 @@ export const GAME_CONFIG = {
       SPEED: 500,
       LIFESPAN: 2000, // ms - increased lifespan
       SCALE: 1,
-      DAMAGE: 10,
+      DAMAGE: 5,
       ROTATEWITHDIRECTION: true,
       MAXSIZE: 50, // increased pool size
       MAX_COUNT: 50, // increased pool size

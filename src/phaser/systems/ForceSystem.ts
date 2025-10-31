@@ -47,6 +47,8 @@ export class ForceSystem {
 
   private lastForceTime = 0;
   private baseForceInterval = 2000;
+  private staticIndicator: Phaser.GameObjects.Graphics | null = null;
+  private indicatorRadius: number = 60; // Static indicator radius
 
 
   constructor(scene: Phaser.Scene, enemySystem: EnemySystem, tfighterSystem: TfighterSystem, player: Player) {
@@ -55,6 +57,8 @@ export class ForceSystem {
     this.tfighterSystem = tfighterSystem;
     this.player = player;
 
+    // Create static indicator circle
+    this.createStaticIndicator();
   }
 
 
@@ -103,6 +107,50 @@ export class ForceSystem {
 
 
 
+  /**
+   * Create static indicator circle to show player has force ability
+   */
+  private createStaticIndicator(): void {
+    // Destroy existing indicator if it exists
+    if (this.staticIndicator) {
+      this.staticIndicator.destroy();
+    }
+
+    this.staticIndicator = this.scene.add.graphics();
+    this.staticIndicator.setDepth((this.forceConfig.depth ?? 10) - 1); // Slightly below the pulsing effect
+    this.updateStaticIndicator();
+  }
+
+  /**
+   * Update static indicator position and visibility
+   */
+  private updateStaticIndicator(): void {
+    if (!this.staticIndicator || !this.player) {
+      return;
+    }
+
+    // Only show if player has force ability
+    if (!this.player.hasForceAbility()) {
+      this.staticIndicator.clear();
+      this.staticIndicator.setVisible(false);
+      return;
+    }
+
+    this.staticIndicator.setVisible(true);
+    const { x, y } = this.player.getPosition();
+
+    // Clear previous drawing
+    this.staticIndicator.clear();
+
+    // Draw static circle outline (not filled, just stroke)
+    // Use force color but with a more subtle appearance
+    const strokeWidth = 2;
+    const alpha = 0.6; // More subtle than the pulsing effect
+    
+    this.staticIndicator.lineStyle(strokeWidth, this.forceConfig.color!, alpha);
+    this.staticIndicator.strokeCircle(x, y, this.indicatorRadius);
+  }
+
   private createVisualEffect(x: number, y: number, config: ForcePoolConfig): void {
     const circle = this.scene.add.circle(
       x,
@@ -131,9 +179,22 @@ export class ForceSystem {
 
 
   update(time: number): void {
+    // Update static indicator position and visibility
+    this.updateStaticIndicator();
+
     const actualInterval = this.baseForceInterval * this.player.forceSpeedMultiplier;
     if (time - this.lastForceTime >= actualInterval) {
       this.applyForce(time);
+    }
+  }
+
+  /**
+   * Clean up resources
+   */
+  destroy(): void {
+    if (this.staticIndicator) {
+      this.staticIndicator.destroy();
+      this.staticIndicator = null;
     }
   }
   

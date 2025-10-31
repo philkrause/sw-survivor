@@ -10,8 +10,9 @@ import { GAME_CONFIG } from '../config/GameConfig';
 export class AtEnemySystem {
   private scene: Phaser.Scene;
   private enemies: Phaser.Physics.Arcade.Group;
-  private spawnTimer: Phaser.Time.TimerEvent;
+  private spawnTimer: Phaser.Time.TimerEvent | null = null;
   private target: Phaser.Physics.Arcade.Sprite;
+  private player: Player;
   private experienceSystem: ExperienceSystem | null = null;
 
   // Tracking active enemies for improved performance
@@ -40,9 +41,10 @@ export class AtEnemySystem {
   private shootingDuration: number = 1000; // How long AT stays still while shooting
   private projectileSystem: any = null; // Will be set by MainScene
 
-  constructor(scene: Phaser.Scene, target: Phaser.Physics.Arcade.Sprite, _player: Player) {
+  constructor(scene: Phaser.Scene, target: Phaser.Physics.Arcade.Sprite, player: Player) {
     this.scene = scene;
     this.target = target;
+    this.player = player;
 
     // Initialize enemy group with preallocated pool
     this.enemies = this.createEnemyGroup();
@@ -101,15 +103,49 @@ export class AtEnemySystem {
   }
 
   /**
+   * Calculate spawn interval based on player level
+   * AT enemies spawn faster as player level increases
+   */
+  private calculateSpawnInterval(): number {
+    const baseInterval = GAME_CONFIG.AT.SPAWN_INTERVAL;
+    const playerLevel = this.player.getLevel();
+
+    // Reduce spawn interval by 25% per level (minimum 30% of base interval)
+    const reductionFactor = Math.max(0.3, 1 - (playerLevel - 1) * 0.25);
+
+    return Math.floor(baseInterval * reductionFactor);
+  }
+
+  /**
    * Start the spawn timer
    */
   private startSpawnTimer(): Phaser.Time.TimerEvent {
+    // Calculate spawn interval based on player level
+    const spawnInterval = this.calculateSpawnInterval();
+
     return this.scene.time.addEvent({
-      delay: 3000, // Spawn every 3 seconds
+      delay: spawnInterval,
       callback: this.spawnEnemy,
       callbackScope: this,
       loop: true
     });
+  }
+
+  /**
+   * Update spawn timer when player levels up
+   * Should be called when player level changes
+   */
+  public updateSpawnRate(): void {
+    // Destroy existing timer
+    if (this.spawnTimer) {
+      this.spawnTimer.destroy();
+      this.spawnTimer = null; // Clear reference
+    }
+
+    // Create new timer with updated interval
+    this.spawnTimer = this.startSpawnTimer();
+
+    console.log(`AT enemy spawn rate updated: ${this.calculateSpawnInterval()}ms (Player Level: ${this.player.getLevel()})`);
   }
 
   /**
@@ -155,7 +191,12 @@ export class AtEnemySystem {
    * Spawn a new AT enemy
    */
   private spawnEnemy(): void {
-    if (this.enemies.countActive() >= 10) { // Max 10 AT enemies at once
+    // Don't spawn AT enemies until player reaches minimum level
+    if (this.player.getLevel() < GAME_CONFIG.AT.MIN_LEVEL) {
+      return;
+    }
+
+    if (this.enemies.countActive() >= GAME_CONFIG.AT.MAX_COUNT) {
       return;
     }
 
@@ -404,6 +445,13 @@ export class AtEnemySystem {
    * Update all AT enemies
    */
   public update(): void {
+    // Ensure spawn timer exists (recreate if destroyed)
+    // Check if timer is null, undefined, or if it was destroyed (Phaser timers become null when destroyed)
+    if (!this.spawnTimer) {
+      this.spawnTimer = this.startSpawnTimer();
+      console.log('AT enemy spawn timer recreated');
+    }
+
     this.updateCameraRect();
     
     // Update visible enemies
@@ -525,6 +573,7 @@ export class AtEnemySystem {
     // Update spawn timer
     if (this.spawnTimer) {
       this.spawnTimer.destroy();
+      this.spawnTimer = null; // Clear reference
     }
     this.spawnTimer = this.scene.time.addEvent({
       delay: config.spawnInterval,

@@ -15,6 +15,7 @@ export class RelicSystem {
   private isAnimationComplete: boolean = false;
   private gameUI: GameUI;
   private spaceKey: Phaser.Input.Keyboard.Key | null = null;
+  private enterKey: Phaser.Input.Keyboard.Key | null = null;
   private isStressTestMode: boolean = false;
   // Baby Yoda fountain state
   private yodaSprites: Phaser.GameObjects.Image[] = [];
@@ -294,7 +295,7 @@ export class RelicSystem {
     relicDisplay.setFrame(0);
 
     // Create instruction text
-    const instruction = this.scene.add.text(centerX, centerY + 200, 'Press SPACE to stop slot or claim relic!', {
+    const instruction = this.scene.add.text(centerX, centerY + 200, 'Press SPACE or ENTER to stop slot or claim relic!', {
       fontSize: '20px',
       color: '#ffffff',
       stroke: '#000000',
@@ -331,9 +332,8 @@ export class RelicSystem {
     }
     
 
-    // Add space key listener
-    this.spaceKey = this.scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE) || null;
-    this.spaceKey?.on('down', () => {
+    // Helper function to handle relic selection (space or enter)
+    const handleRelicSelection = () => {
       if (!this.isShowingRelicScreen) {
         return;
       }
@@ -362,7 +362,15 @@ export class RelicSystem {
         this.claimRelic(this.currentRelicDisplay, this.currentOverlay, this.currentTitle, 
                        this.currentChestSprite, this.currentInstruction);
       }
-    });
+    };
+
+    // Add space key listener
+    this.spaceKey = this.scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE) || null;
+    this.spaceKey?.on('down', handleRelicSelection);
+
+    // Add enter key listener
+    this.enterKey = this.scene.input.keyboard?.addKey(Phaser.Input.Keyboard.KeyCodes.ENTER) || null;
+    this.enterKey?.on('down', handleRelicSelection);
   }
 
   /**
@@ -451,7 +459,7 @@ export class RelicSystem {
     const centerX = this.scene.cameras.main.centerX;
     const centerY = this.scene.cameras.main.centerY;
     
-    instruction.setText(`${relicUpgrade.name}\n${relicUpgrade.description}\n\nPress SPACE to claim!`);
+    instruction.setText(`${relicUpgrade.name}\n${relicUpgrade.description}\n\nPress SPACE or ENTER to claim!`);
     instruction.setPosition(centerX, centerY + 200);
     instruction.setFontSize('18px');
     instruction.setColor('#ffd700');
@@ -527,10 +535,14 @@ export class RelicSystem {
     // Relic applied successfully
     // Note: Relic display in corner removed for now
 
-    // Remove space key listener
+    // Remove space and enter key listeners
     if (this.spaceKey) {
       this.spaceKey.off('down');
       this.spaceKey = null;
+    }
+    if (this.enterKey) {
+      this.enterKey.off('down');
+      this.enterKey = null;
     }
   }
 

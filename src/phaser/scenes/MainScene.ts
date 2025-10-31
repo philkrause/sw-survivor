@@ -719,6 +719,7 @@ export default class MainScene extends Phaser.Scene {
     // Update enemy spawn rate based on new player level
     this.enemySystem.updateSpawnRate();
     this.tfighterSystem.updateSpawnRate();
+    this.atEnemySystem.updateSpawnRate();
     
     // Emit level up particle effect
     const playerPos = this.player.getPosition();

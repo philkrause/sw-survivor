@@ -14,7 +14,8 @@ export class EnemySystem {
   private target: Phaser.Physics.Arcade.Sprite;
   private player: Player;
   private experienceSystem: ExperienceSystem | null = null;
-  private enemyTypes = ['dune'];
+  private gameStartTime: number = 0;
+  private lastSpawnRateUpdate: number = 0;
 
   // Tracking active enemies for improved performance
   private activeEnemies: Set<Phaser.Physics.Arcade.Sprite> = new Set();
@@ -35,6 +36,8 @@ export class EnemySystem {
     this.scene = scene;
     this.target = target;
     this.player = player;
+    this.gameStartTime = scene.time.now; // Track when game started
+    this.lastSpawnRateUpdate = scene.time.now; // Track last spawn rate update
 
     // Initialize enemy group with preallocated pool
     this.enemies = this.createEnemyGroup();
@@ -141,22 +144,37 @@ export class EnemySystem {
 
 
   /**
-   * Calculate spawn interval based on player level
-   * Enemies spawn faster as player level increases
+   * Calculate spawn interval based on player level and elapsed time
+   * Enemies spawn faster as player level increases and time passes
    */
   private calculateSpawnInterval(): number {
     const baseInterval = GAME_CONFIG.ENEMY.SPAWN_INTERVAL;
     const playerLevel = this.player.getLevel();
 
-    // Reduce spawn interval by 15% per level (minimum 30% of base interval)
-    const reductionFactor = Math.max(0.3, 1 - (playerLevel - 1) * 0.25);
+    // Level-based reduction: 25% per level (minimum 30% of base interval)
+    const levelReductionFactor = Math.max(
+      GAME_CONFIG.ENEMY.LEVEL_SCALING.MIN_REDUCTION_FACTOR,
+      1 - (playerLevel - 1) * GAME_CONFIG.ENEMY.LEVEL_SCALING.REDUCTION_PER_LEVEL
+    );
 
-    return Math.floor(baseInterval * reductionFactor);
+    // Time-based reduction: 5% per minute (maximum 50% reduction)
+    const elapsedTime = this.scene.time.now - this.gameStartTime;
+    const minutesElapsed = Math.floor(elapsedTime / 60000);
+    const timeReduction = Math.min(
+      minutesElapsed * GAME_CONFIG.ENEMY.TIME_SCALING.REDUCTION_PER_MINUTE,
+      GAME_CONFIG.ENEMY.TIME_SCALING.MAX_REDUCTION
+    );
+    const timeReductionFactor = 1 - timeReduction;
+
+    // Combine both reductions (multiply factors)
+    const totalReductionFactor = levelReductionFactor * timeReductionFactor;
+
+    return Math.floor(baseInterval * totalReductionFactor);
   }
 
   /**
-   * Update spawn timer when player levels up
-   * Should be called when player level changes
+   * Update spawn timer when player levels up or time passes
+   * Should be called when player level changes or periodically for time-based scaling
    */
   updateSpawnRate(): void {
     // Destroy existing timer
@@ -166,9 +184,10 @@ export class EnemySystem {
 
     // Create new timer with updated interval
     this.spawnTimer = this.startSpawnTimer();
-    //this.startSpawnTfighterTimer();
 
-    console.log(`Enemy spawn rate updated: ${this.calculateSpawnInterval()}ms (Player Level: ${this.player.getLevel()})`);
+    const elapsedTime = this.scene.time.now - this.gameStartTime;
+    const minutesElapsed = Math.floor(elapsedTime / 60000);
+    console.log(`Enemy spawn rate updated: ${this.calculateSpawnInterval()}ms (Player Level: ${this.player.getLevel()}, Time: ${minutesElapsed}m)`);
   }
 
 
@@ -201,6 +220,23 @@ export class EnemySystem {
   }
 
   /**
+   * Get available enemy types based on player level
+   */
+  private getAvailableEnemyTypes(): string[] {
+    const playerLevel = this.player.getLevel();
+    const availableTypes: string[] = [];
+
+    // Check each enemy type against unlock level
+    for (const [type, unlockLevel] of Object.entries(GAME_CONFIG.ENEMY.TYPE_UNLOCKS)) {
+      if (playerLevel >= unlockLevel) {
+        availableTypes.push(type);
+      }
+    }
+
+    return availableTypes;
+  }
+
+  /**
    * Spawn a new enemy at a random edge position
    */
   private spawnEnemy(): void {
@@ -209,20 +245,16 @@ export class EnemySystem {
       return;
     }
 
-    let type = "dune"; // Default enemy type
-
-    if (this.player.getLevel() > 1)
-      this.enemyTypes.push("storm");
-      this.enemyTypes.push("dune");
-
-    if (this.player.getLevel() > 2)
-      this.enemyTypes.push("soldier1");
-
+    // Get available enemy types based on player level
+    const availableTypes = this.getAvailableEnemyTypes();
     
-    type = Phaser.Utils.Array.GetRandom(this.enemyTypes);
-    
-    if(GAME_CONFIG.DEBUG) {
+    if (availableTypes.length === 0) {
+      // Fallback to dune if no types are available
+      availableTypes.push('dune');
     }
+
+    // Pick a random type from available types
+    const type = Phaser.Utils.Array.GetRandom(availableTypes);
 
     this.spawnZones = this.createSpawnZones()
 
@@ -337,6 +369,17 @@ export class EnemySystem {
    * Update all active enemies - optimized for large quantities
    */
   update(_time: number, _delta: number): void {
+    // Periodically update spawn rate based on elapsed time (check every minute)
+    const currentTime = this.scene.time.now;
+    const previousMinute = Math.floor((this.lastSpawnRateUpdate - this.gameStartTime) / 60000);
+    const currentMinute = Math.floor((currentTime - this.gameStartTime) / 60000);
+    
+    // Update spawn rate if we've crossed a minute boundary
+    if (currentMinute > previousMinute) {
+      this.updateSpawnRate();
+      this.lastSpawnRateUpdate = currentTime;
+    }
+
     // Update camera rectangle for visibility checks
     const camera = this.scene.cameras.main;
     if (camera) {
@@ -735,13 +778,6 @@ export class EnemySystem {
 
     // Store health bars setting for use in damageEnemy
     this.healthBarsEnabled = config.healthBarsEnabled;
-  }
-
-  /**
-   * Get current enemy count
-   */
-  getEnemyCount(): number {
-    return this.activeEnemies.size;
   }
 
   /**

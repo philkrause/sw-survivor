@@ -1268,7 +1268,11 @@ deathVisual(): void {
    */
   increaseMaxHealth(amount: number): void {
     this.maxHealth += amount;
-    this.health = Math.min(this.health + amount, this.maxHealth); // Also heal by the same amount
+    // When gaining max health, also restore health significantly
+    // Heal by the amount gained + 50% of the amount (so +20 max health = +30 healing)
+    // This makes health upgrades feel rewarding and helps sustain the player
+    const healAmount = amount + Math.floor(amount * 0.5);
+    this.health = Math.min(this.health + healAmount, this.maxHealth);
   }
 
   /**

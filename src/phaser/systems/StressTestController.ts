@@ -263,10 +263,12 @@ export class StressTestController {
     // Reset AT enemy system to normal values
     if (this.atEnemySystem) {
       this.atEnemySystem.setStressTestConfig({
-        spawnInterval: 3000, // Default AT enemy spawn interval
-        maxCount: 10, // Default AT enemy max count
+        spawnInterval: GAME_CONFIG.AT.SPAWN_INTERVAL, // Base interval
+        maxCount: GAME_CONFIG.AT.MAX_COUNT,
         healthBarsEnabled: true
       });
+      // Update spawn rate to use calculated interval based on current player level
+      this.atEnemySystem.updateSpawnRate();
     }
 
     if (this.tFighterSystem) {
