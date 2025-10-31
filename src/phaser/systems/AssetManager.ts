@@ -71,6 +71,7 @@ export class AssetManager {
 
     // ************* EXTRAS **************
     this.scene.load.image('byoda', 'assets/images/game/babyyoda.png');
+    this.scene.load.image('skull', 'assets/images/game/skull.png');
 
     // ************* ENEMIES **************
     this.scene.load.spritesheet('storm', 'assets/images/game/storm_walk.png', {

@@ -17,6 +17,8 @@ export class GameUI {
   private relicDisplay: Phaser.GameObjects.Container;
   private gameTimer: Phaser.GameObjects.Text;
   private startTime: number;
+  private killCounterSprite: Phaser.GameObjects.Image | null = null;
+  private killCounterText: Phaser.GameObjects.Text | null = null;
 
   constructor(scene: Phaser.Scene, player: Player) {
     this.scene = scene;
@@ -30,6 +32,7 @@ export class GameUI {
     this.experienceBar = this.createExperienceBar();
     this.relicDisplay = this.createRelicDisplay();
     this.gameTimer = this.createGameTimer();
+    this.createKillCounter();
     this.startTime = this.scene.time.now;
     
     // Listen for level up events
@@ -51,6 +54,15 @@ export class GameUI {
       this.gameTimer.setVisible(true);
     } else {
       this.gameTimer = this.createGameTimer();
+    }
+    // Recreate kill counter if needed
+    if (!this.killCounterText || !(this.killCounterText as any).scene) {
+      this.createKillCounter();
+    } else {
+      this.killCounterText.setVisible(true);
+      if (this.killCounterSprite) {
+        this.killCounterSprite.setVisible(true);
+      }
     }
   }
   
@@ -428,6 +440,64 @@ export class GameUI {
     timer.setDepth(2000); // Above other UI elements
     
     return timer;
+  }
+
+  /**
+   * Create the kill counter display
+   */
+  private createKillCounter(): void {
+    const screenWidth = this.scene.cameras.main.width;
+    const x = screenWidth * 0.75; // 3/4 on the right side
+    const y = 40; // Same height as timer
+
+    // Create skull sprite if texture exists
+    if (this.scene.textures.exists('skull')) {
+      this.killCounterSprite = this.scene.add.image(x - 25, y, 'skull');
+      this.killCounterSprite.setOrigin(0, 0.5);
+      this.killCounterSprite.setScrollFactor(0); // Fix to camera viewport
+      this.killCounterSprite.setDepth(2000); // Above other UI elements
+      this.killCounterSprite.setScale(2); // Scale if needed
+    }
+
+    // Create kill count text
+    this.killCounterText = this.scene.add.text(
+      x, // Position next to skull
+      y,
+      '0',
+      {
+        fontSize: '24px',
+        color: '#ffffff',
+        align: 'left',
+        stroke: '#000000',
+        strokeThickness: 3
+      }
+    );
+    
+    this.killCounterText.setOrigin(0, 0.5);
+    this.killCounterText.setScrollFactor(0); // Fix to camera viewport
+    this.killCounterText.setDepth(2000); // Above other UI elements
+  }
+
+  /**
+   * Update the kill counter display
+   */
+  public updateKillCount(count: number): void {
+    // Recreate if destroyed
+    if (!this.killCounterText || !(this.killCounterText as any).scene) {
+      this.createKillCounter();
+      // Update immediately after recreation
+      if (this.killCounterText) {
+        this.killCounterText.setText(count.toString());
+      }
+      return;
+    }
+
+    if (!this.killCounterText.active) {
+      return;
+    }
+
+    // Update text
+    this.killCounterText.setText(count.toString());
   }
 
   /**

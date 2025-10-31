@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config/GameConfig';
 import { EnemySystem } from './EnemySystem';
 import { TfighterSystem } from './TfighterSystem';
+import { SoundManager } from '../utils/SoundManager';
 
 import { Player } from '../entities/Player';
 
@@ -27,6 +28,7 @@ export class SaberSystem {
   private enemySystem: EnemySystem;
   private tfighterSystem: TfighterSystem;
   private player: Player;
+  private soundManager: SoundManager;
 
 
 
@@ -47,11 +49,12 @@ export class SaberSystem {
   };
 
 
-  constructor(scene: Phaser.Scene, enemySystem: EnemySystem, tfighterSystem: TfighterSystem, player: Player) {
+  constructor(scene: Phaser.Scene, enemySystem: EnemySystem, tfighterSystem: TfighterSystem, player: Player, soundManager: SoundManager) {
     this.scene = scene;
     this.enemySystem = enemySystem;
     this.tfighterSystem = tfighterSystem;
     this.player = player;
+    this.soundManager = soundManager;
     this.slashTimer = undefined;
   }
 
@@ -81,8 +84,8 @@ export class SaberSystem {
         const { x, y, facingLeft } = getPlayerData();
         const angle = facingLeft ? Math.PI : 0;
         this.slash(x, y, angle, onHit);
-            // Play sound
-        this.scene.sound.play('swing', { volume: 0.15 });
+        // Play sound using SoundManager to respect global volume
+        this.soundManager.playSound('swing', 0.15);
       }
     });
   }

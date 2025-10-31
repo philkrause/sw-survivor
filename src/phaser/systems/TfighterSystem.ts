@@ -184,8 +184,8 @@ export class TfighterSystem {
       return;
     }
 
-    // Don't spawn T-fighters until player reaches level 2
-    if (this.player.getLevel() <= 1) {
+    // Don't spawn T-fighters until player reaches minimum level
+    if (this.player.getLevel() < GAME_CONFIG.TFIGHTER.MIN_LEVEL) {
       return;
     }
 

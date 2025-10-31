@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { Player } from '../entities/Player';
+import { GAME_CONFIG } from '../config/GameConfig';
 /**
  * Represents an upgrade that can be chosen by the player
  */
@@ -85,7 +86,7 @@ export class UpgradeSystem {
         player.unlockSaberUpgrade();
         this.scene.events.emit('upgrade-saber');
       },
-      isAvailable: (player) => player.getLevel() >= 8 // Unlock at level 8
+      isAvailable: (player) => player.getLevel() >= GAME_CONFIG.ABILITIES.SABER_UNLOCK_LEVEL
     });
 
     // ** THE FORCE UNLOCK **
@@ -99,7 +100,7 @@ export class UpgradeSystem {
       apply: (player) => {
         player.unlockForceUpgrade();
       },
-      isAvailable: (player) => player.getLevel() >= 5 // Unlock at level 5
+      isAvailable: (player) => player.getLevel() >= GAME_CONFIG.ABILITIES.FORCE_UNLOCK_LEVEL
     });
     // // Add attack speed upgrade
     this.availableUpgrades.push({
@@ -154,7 +155,7 @@ export class UpgradeSystem {
       apply: (player) => {
         player.unlockR2D2Upgrade();
       },
-      isAvailable: (player) => player.getLevel() >= 2, // Unlock at level 2
+      isAvailable: (player) => player.getLevel() >= GAME_CONFIG.ABILITIES.R2D2_UNLOCK_LEVEL
     });
 
     this.availableUpgrades.push({

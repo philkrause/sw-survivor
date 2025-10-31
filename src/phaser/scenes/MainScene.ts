@@ -20,6 +20,7 @@ import { PauseMenu } from '../ui/PauseMenu';
 import { GAME_CONFIG } from '../config/GameConfig';
 import { PerformanceMonitor } from '../systems/PerformanceMonitor';
 import { StressTestController } from '../systems/StressTestController';
+import { SoundManager } from '../utils/SoundManager';
 import StartScene from './StartScene';
 
 /**
@@ -46,6 +47,8 @@ export default class MainScene extends Phaser.Scene {
   private upgradeUI!: UpgradeUI;
   private pauseMenu!: PauseMenu;
   private background!: Phaser.GameObjects.TileSprite;
+  private soundManager!: SoundManager;
+  private enemyKillCount: number = 0; // Track total enemy kills
   
   // Stress testing systems
   private performanceMonitor!: PerformanceMonitor;
@@ -131,6 +134,9 @@ export default class MainScene extends Phaser.Scene {
 
     this.player = new Player(this, centerX, centerY, this.projectileSystem);
     
+    // Initialize sound manager for centralized volume control
+    this.soundManager = new SoundManager(this);
+    
     this.enemySystem = new EnemySystem(this, this.player.getSprite(), this.player);
 
     this.atEnemySystem = new AtEnemySystem(this, this.player.getSprite(), this.player);
@@ -141,7 +147,7 @@ export default class MainScene extends Phaser.Scene {
 
     this.R2D2System = new R2D2System(this, this.enemySystem, this.tfighterSystem, this.player);
 
-    this.saberSystem = new SaberSystem(this, this.enemySystem, this.tfighterSystem, this.player );
+    this.saberSystem = new SaberSystem(this, this.enemySystem, this.tfighterSystem, this.player, this.soundManager );
     
     // Setup projectile collisions immediately after systems are created
     this.setupProjectileCollisions();
@@ -193,6 +199,12 @@ export default class MainScene extends Phaser.Scene {
 
     // Create game UI
     this.gameUI = new GameUI(this, this.player);
+
+    // Listen for enemy death events to track kills
+    this.events.on('enemy-death', () => {
+      this.enemyKillCount++;
+      this.gameUI.updateKillCount(this.enemyKillCount);
+    });
 
     // Create relic system (needs GameUI reference)
     this.relicSystem = new RelicSystem(this, this.player, this.gameUI, this.upgradeSystem);
@@ -561,7 +573,7 @@ export default class MainScene extends Phaser.Scene {
       (this.gameUI as any).ensureUIVisible();
       // Force a health/exp redraw using current values
       this.gameUI.updateHealth(this.player.getHealth(), this.player.getMaxHealth());
-      this.gameUI.updateExperience(this.player.getExperience(), this.player.getExperienceToNextLevel());
+      this.gameUI.updateExperience(this.player.getExperience(), this.player.getExperienceToNextLevel(), this.player.getLevel());
     }
 
     // Ensure stress test UI reappears

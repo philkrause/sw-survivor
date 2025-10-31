@@ -26,7 +26,7 @@ export const GAME_CONFIG = {
     SPEED: 50,
     SCALE: 2,
     DEPTH: 5,
-    SPAWN_INTERVAL: 500, // ms between spawns (base interval)
+    SPAWN_INTERVAL: 1000, // ms between spawns (base interval)
     MAX_COUNT: 150,
     SPAWN_PADDING: 20, // Distance from edge
     HITBOX_SCALE: .01,
@@ -55,8 +55,8 @@ export const GAME_CONFIG = {
     // Per-type overrides (multipliers against MAX_HEALTH)
     TYPES: {
       dune: { HEALTH_MULTIPLIER: 0.25 },
-      storm: { HEALTH_MULTIPLIER: 2.0 },
-      soldier1: { HEALTH_MULTIPLIER: 3.0 },
+      storm: { HEALTH_MULTIPLIER: .5 },
+      soldier1: { HEALTH_MULTIPLIER: 1.5 },
     }
   },
   TFIGHTER: {
@@ -65,6 +65,7 @@ export const GAME_CONFIG = {
     DEPTH: 7,
     SPAWN_INTERVAL: 5000, // ms between spawns
     MAX_COUNT: 150,
+    MIN_LEVEL: 5, // Minimum player level before T-Fighters spawn
     SPAWN_PADDING: 20, // Distance from edge
     HITBOX_SCALE: 1,
     TINT: 0xff0000,
@@ -77,7 +78,7 @@ export const GAME_CONFIG = {
   },
   AT: {
     SPAWN_INTERVAL: 2000, // ms between spawns (base interval)
-    MAX_COUNT: 50, // Maximum number of AT enemies at once
+    MAX_COUNT: 10, // Maximum number of AT enemies at once
     MIN_LEVEL: 10, // Minimum player level before AT enemies spawn
     RELIC_DROP_CHANCE: 0.15
   },
@@ -151,6 +152,13 @@ export const GAME_CONFIG = {
       GROWSCALE: 500, // ms
       DAMAGEMULTIPLIER: 1, // Damage multiplier for saber
     },
+  },
+
+  // Ability unlock levels
+  ABILITIES: {
+    R2D2_UNLOCK_LEVEL: 2, // Level at which R2-D2 ability unlocks
+    FORCE_UNLOCK_LEVEL: 2, // Level at which Force ability unlocks
+    SABER_UNLOCK_LEVEL: 8, // Level at which Lightsaber ability unlocks
   },
 
   UI: {
