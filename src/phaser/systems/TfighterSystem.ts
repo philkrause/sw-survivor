@@ -649,13 +649,6 @@ export class TfighterSystem {
   }
 
   /**
-   * Get the current number of active enemies
-   */
-  getEnemyCount(): number {
-    return this.activeEnemies.size;
-  }
-
-  /**
    * Set a new target for enemies to follow
    */
   setTarget(target: Phaser.Physics.Arcade.Sprite): void {

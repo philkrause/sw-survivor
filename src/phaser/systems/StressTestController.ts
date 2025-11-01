@@ -28,9 +28,7 @@ export class StressTestController {
   private particleEffects!: ParticleEffects;
   private relicSystem!: RelicSystem;
 
-  // UI elements
-  private stressTestText!: Phaser.GameObjects.Text;
-  private controlsText!: Phaser.GameObjects.Text;
+  // UI elements (removed - stress test UI is now hidden)
 
   // Keyboard controls
   private stressTestKeys!: {
@@ -82,59 +80,16 @@ export class StressTestController {
   }
 
   private createUI(): void {
-    // Stress test mode indicator
-    this.stressTestText = this.scene.add.text(10, 100, '', {
-      fontSize: '18px',
-      color: '#ff0000',
-      stroke: '#000000',
-      strokeThickness: 2
-    });
-    this.stressTestText.setScrollFactor(0);
-    this.stressTestText.setDepth(5000);
-
-    // Controls help text
-    this.controlsText = this.scene.add.text(10, 130, '', {
-      fontSize: '14px',
-      color: '#ffffff',
-      stroke: '#000000',
-      strokeThickness: 1
-    });
-    this.controlsText.setScrollFactor(0);
-    this.controlsText.setDepth(5000);
-
-    this.updateUI();
+    // Stress test UI removed - no longer showing on screen
+    // Stress test functionality still works via keyboard shortcuts but UI is hidden
   }
 
   public ensureUIVisible(): void {
-    // Recreate texts if they were destroyed by overlays/pauses
-    if (!this.stressTestText || !(this.stressTestText as any).scene) {
-      this.createUI();
-      return;
-    }
-    this.stressTestText.setVisible(true).setDepth(5000).setScrollFactor(0);
-    if (!this.controlsText || !(this.controlsText as any).scene) {
-      this.createUI();
-      return;
-    }
-    this.controlsText.setVisible(true).setDepth(5000).setScrollFactor(0);
-    this.updateUI();
+    // UI is now hidden - stress test functionality still works via keyboard shortcuts
   }
 
   private updateUI(): void {
-    if (this.isStressTestMode) {
-      const config = STRESS_TEST_CONFIGS[this.currentLevel];
-      this.stressTestText.setText(`STRESS TEST: ${config.name}`);
-      this.stressTestText.setColor('#ff0000');
-      
-      this.controlsText.setText(
-        'F1: Toggle | F2: Next Level | F3: Prev Level | F4: Reset'
-      );
-    } else {
-      this.stressTestText.setText('STRESS TEST: OFF');
-      this.stressTestText.setColor('#888888');
-      
-      this.controlsText.setText('F1: Enable Stress Test Mode');
-    }
+    // UI is now hidden - stress test functionality still works via keyboard shortcuts
   }
 
   public toggleStressTestMode(): void {
@@ -151,8 +106,6 @@ export class StressTestController {
     } else {
       this.resetToNormal();
     }
-    
-    this.updateUI();
   }
 
   public nextStressLevel(): void {
@@ -164,7 +117,6 @@ export class StressTestController {
     
     this.currentLevel = levels[nextIndex];
     this.applyStressTestConfig();
-    this.updateUI();
   }
 
   public previousStressLevel(): void {
@@ -176,7 +128,6 @@ export class StressTestController {
     
     this.currentLevel = levels[prevIndex];
     this.applyStressTestConfig();
-    this.updateUI();
   }
 
   public resetToNormal(): void {
@@ -306,7 +257,6 @@ export class StressTestController {
   }
 
   public destroy(): void {
-    if (this.stressTestText) this.stressTestText.destroy();
-    if (this.controlsText) this.controlsText.destroy();
+    // UI elements removed - nothing to destroy
   }
 }

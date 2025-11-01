@@ -103,9 +103,10 @@ export class PerformanceMonitor {
     this.enemyCountText.setText(`Enemies: ${enemyCount}`);
 
     // Update memory usage (if available)
-    if (performance.memory) {
-      const memoryMB = Math.round(performance.memory.usedJSHeapSize / 1024 / 1024);
-      const totalMB = Math.round(performance.memory.totalJSHeapSize / 1024 / 1024);
+    const perfMemory = (performance as any).memory;
+    if (perfMemory) {
+      const memoryMB = Math.round(perfMemory.usedJSHeapSize / 1024 / 1024);
+      const totalMB = Math.round(perfMemory.totalJSHeapSize / 1024 / 1024);
       this.memoryText.setText(`Memory: ${memoryMB}MB / ${totalMB}MB`);
     } else {
       this.memoryText.setText('Memory: N/A');

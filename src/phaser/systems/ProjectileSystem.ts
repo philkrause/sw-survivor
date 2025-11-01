@@ -283,7 +283,7 @@ export class ProjectileSystem {
     maxCount: number;
   }): void {
     // Update max count for all pools
-    for (const [key, group] of this.pools) {
+    for (const [_key, group] of this.pools) {
       if (config.maxCount > group.maxSize) {
         group.maxSize = config.maxCount;
       }
@@ -295,7 +295,7 @@ export class ProjectileSystem {
    */
   getTotalProjectileCount(): number {
     let total = 0;
-    for (const [key, group] of this.pools) {
+    for (const [_key, group] of this.pools) {
       total += group.children.size;
     }
     return total;
@@ -306,7 +306,7 @@ export class ProjectileSystem {
    */
   getActiveProjectileCount(): number {
     let active = 0;
-    for (const [key, group] of this.pools) {
+    for (const [_key, group] of this.pools) {
       active += group.getTotalUsed();
     }
     return active;

@@ -124,7 +124,6 @@ export class OptionsMenu {
     }).setOrigin(0.5).setDepth(1001).setScrollFactor(0);
 
     // Create menu items (no volume text here since it's in the slider)
-    const menuItems: string[] = [];
     this.menuItems = [];
 
     // Create back button at bottom of screen
@@ -151,7 +150,7 @@ export class OptionsMenu {
     this.updateSelection();
   }
 
-  private createVolumeSlider(x: number, y: number): void {
+  private createVolumeSlider(_x: number, y: number): void {
     const screenWidth = this.scene.cameras.main.width;
     const leftThird = screenWidth / 3;
     const rightThird = screenWidth * 2 / 3;
@@ -284,7 +283,7 @@ export class OptionsMenu {
 
     // Remove all remaining menu elements
     this.scene.children.list.forEach(child => {
-      if (child.depth >= 1000) {
+      if ((child as any).depth >= 1000) {
         child.destroy();
       }
     });

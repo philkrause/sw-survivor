@@ -6,7 +6,6 @@ import { OptionsMenu } from '../ui/OptionsMenu';
 export default class StartScene extends Phaser.Scene {
   private music!: Phaser.Sound.BaseSound;
   private optionsMenu!: OptionsMenu;
-  private isShowingOptions: boolean = false;
 
   constructor() {
     super({ key: 'StartScene' });
@@ -120,7 +119,6 @@ export default class StartScene extends Phaser.Scene {
    * Show options menu
    */
   private showOptions(): void {
-    this.isShowingOptions = true;
     this.optionsMenu.show();
   }
 
@@ -128,7 +126,6 @@ export default class StartScene extends Phaser.Scene {
    * Close options menu
    */
   private closeOptions(): void {
-    this.isShowingOptions = false;
     this.optionsMenu.hide();
   }
 
