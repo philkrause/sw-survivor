@@ -67,8 +67,8 @@ export class UpgradeUI {
     } else if (event.key === 'ArrowLeft' || event.key.toLowerCase() === 'a') {
       this.selectedCardIndex = (this.selectedCardIndex - 1 + total) % total;
       this.updateSelectionHighlight();
-    } else if (event.key === 'Enter') {
-
+    } else if (event.key === 'Enter' || event.key === ' ') {
+      // Allow both Enter and Spacebar to select upgrade
       const upgrade = this.upgrades[this.selectedCardIndex];
       this.onUpgradeSelected(upgrade.id);
       this.hide();
@@ -88,7 +88,8 @@ export class UpgradeUI {
       this.scene.input.keyboard!.addKey('RIGHT'),
       this.scene.input.keyboard!.addKey('A'),
       this.scene.input.keyboard!.addKey('D'),
-      this.scene.input.keyboard!.addKey('ENTER')
+      this.scene.input.keyboard!.addKey('ENTER'),
+      this.scene.input.keyboard!.addKey('SPACE')
     ];
 
     this.scene.input.keyboard!.on('keydown', this.handleKeyDown, this);

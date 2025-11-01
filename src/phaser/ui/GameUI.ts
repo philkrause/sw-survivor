@@ -14,6 +14,22 @@ export class GameUI {
   private experienceBar: Phaser.GameObjects.Graphics;
   private healthBar: Phaser.GameObjects.Graphics;
   private player: Player;
+  private relicDisplay: Phaser.GameObjects.Container;
+  private gameTimer: Phaser.GameObjects.Text;
+  private startTime: number;
+  private killCounterSprite: Phaser.GameObjects.Image | null = null;
+  private killCounterText: Phaser.GameObjects.Text | null = null;
+  private upgradeIconsContainer: Phaser.GameObjects.Container;
+  private upgradeIconSprites: Map<string, Phaser.GameObjects.Image> = new Map();
+  
+  // Mapping of upgrade IDs to icon image keys
+  private upgradeIconMap: Map<string, string> = new Map([
+    ['blaster', 'blaster_icon'], // Blaster starts unlocked
+    ['unlock_saber', 'saber_icon'], // Will use saber_icon.png if loaded
+    ['unlock_force', 'spark'], // Using spark1.png
+    ['unlock_bb8', 'bb88'], // Using bb88.png
+    ['r2d2_droid', 'r2d2'], // Using r2d2.png
+  ]);
 
   constructor(scene: Phaser.Scene, player: Player) {
     this.scene = scene;
@@ -25,9 +41,50 @@ export class GameUI {
     //this.levelText = this.createLevelText();
     this.healthBar = this.createHealthBar();
     this.experienceBar = this.createExperienceBar();
+    this.relicDisplay = this.createRelicDisplay();
+    this.gameTimer = this.createGameTimer();
+    this.createKillCounter();
+    this.upgradeIconsContainer = this.createUpgradeIconsDisplay();
+    this.startTime = this.scene.time.now;
     
     // Listen for level up events
     this.scene.events.on('player-level-up', this.onPlayerLevelUp, this);
+    // Listen for upgrade events to update icons
+    this.scene.events.on('upgrade-applied', this.onUpgradeApplied, this);
+    
+    // Initial update to show starting upgrades (like blaster)
+    this.updateUpgradeIcons();
+  }
+
+  /** Ensure core UI elements are visible and recreated if needed */
+  public ensureUIVisible(): void {
+    if (!this.healthBar || !(this.healthBar as any).scene) {
+      this.healthBar = this.createHealthBar();
+    }
+    if (!this.experienceBar || !(this.experienceBar as any).scene) {
+      this.experienceBar = this.createExperienceBar();
+    }
+    this.healthBar.setVisible(true);
+    this.experienceBar.setVisible(true);
+    // Keep relic display and timer visible as appropriate
+    if (this.gameTimer && (this.gameTimer as any).scene) {
+      this.gameTimer.setVisible(true);
+    } else {
+      this.gameTimer = this.createGameTimer();
+    }
+    // Recreate kill counter if needed
+    if (!this.killCounterText || !(this.killCounterText as any).scene) {
+      this.createKillCounter();
+    } else {
+      this.killCounterText.setVisible(true);
+      if (this.killCounterSprite) {
+        this.killCounterSprite.setVisible(true);
+      }
+    }
+    // Ensure upgrade icons are visible
+    if (this.upgradeIconsContainer) {
+      this.upgradeIconsContainer.setVisible(true);
+    }
   }
   
   /**
@@ -74,7 +131,7 @@ export class GameUI {
   private createHealthBar(): Phaser.GameObjects.Graphics {
     const healthBar = this.scene.add.graphics();
     healthBar.setScrollFactor(0); // Fix to camera
-    healthBar.setDepth(1000); // Increase depth to ensure visibility
+    healthBar.setDepth(2000); // Higher depth to stay above pause menu
     return healthBar;
   }
   
@@ -84,8 +141,19 @@ export class GameUI {
   private createExperienceBar(): Phaser.GameObjects.Graphics {
     const experienceBar = this.scene.add.graphics();
     experienceBar.setScrollFactor(0); // Fix to camera
-    experienceBar.setDepth(1000); // Increase depth to ensure visibility
+    experienceBar.setDepth(2000); // Higher depth to stay above pause menu
     return experienceBar;
+  }
+  
+  /**
+   * Create relic display container
+   */
+  private createRelicDisplay(): Phaser.GameObjects.Container {
+    const container = this.scene.add.container(0, 0);
+    container.setScrollFactor(0); // Fix to camera
+    container.setDepth(2000); // Higher depth to stay above pause menu
+    container.setVisible(false); // Start hidden
+    return container;
   }
   
   /**
@@ -228,7 +296,7 @@ export class GameUI {
       fontSize: '12px',
       color: '#ffffff',
       fontStyle: 'bold'
-    }).setOrigin(0.5).setName('exp-text').setScrollFactor(0).setDepth(1000);
+    }).setOrigin(0.5).setName('exp-text').setScrollFactor(0).setDepth(2000);
   }
   
   /**
@@ -262,7 +330,7 @@ export class GameUI {
         ...GAME_CONFIG.UI.TEXT_STYLE,
         fontSize: size
       }
-    ).setOrigin(0.5).setAlpha(1).setColor(color).setDepth(1000);
+    ).setOrigin(0.5).setAlpha(1).setColor(color).setDepth(2000);
     
     // Fade out and destroy after duration
     if(duration > 0) {
@@ -279,11 +347,321 @@ export class GameUI {
   }
   
   /**
+   * Show a relic in the UI
+   */
+  showRelic(relicId: string, relicName: string, relicDescription: string): void {
+    //console.log("GameUI.showRelic called:", relicName, relicDescription);
+    
+    // Clear existing relic display
+    this.relicDisplay.removeAll(true);
+    
+    // Position below experience bar
+    const x = 20; // Left side of screen
+    const y = 50; // Below experience bar
+    
+    // Position the container at the correct location
+    this.relicDisplay.setPosition(x, y);
+    
+    // Create background (positioned relative to container at 0,0)
+    const bg = this.scene.add.rectangle(0, 0, 200, 60, 0x1d1805, 0.9);
+    bg.setStrokeStyle(2, 0xf0c040);
+    bg.setScrollFactor(0); // Fix to camera viewport
+    bg.setDepth(2000); // Ensure it's above other UI elements
+    this.relicDisplay.add(bg);
+    
+    // Create relic sprite - map relic ID to sprite frame (positioned relative to container)
+    const relicFrame = this.getRelicFrame(relicId);
+    console.log("Creating relic sprite for ID:", relicId, "frame:", relicFrame);
+    const relicSprite = this.scene.add.sprite(-60, 0, 'relics');
+    relicSprite.setFrame(relicFrame);
+    relicSprite.setScale(2);
+    relicSprite.setScrollFactor(0); // Fix to camera viewport
+    relicSprite.setDepth(2000); // Ensure it's above other UI elements
+    relicSprite.setVisible(true); // Ensure it's visible
+    relicSprite.setAlpha(1); // Ensure full opacity
+    this.relicDisplay.add(relicSprite);
+    console.log("Relic sprite created:", relicSprite.visible, relicSprite.alpha, relicSprite.frame.name);
+    
+    // Create relic name text (positioned relative to container)
+    const nameText = this.scene.add.text(20, -10, relicName, {
+      fontSize: '16px',
+      color: '#f0c040',
+      fontStyle: 'bold',
+      align: 'left',
+      stroke: '#000000',
+      strokeThickness: 2
+    });
+    nameText.setOrigin(0, 0.5);
+    nameText.setScrollFactor(0); // Fix to camera viewport
+    nameText.setDepth(2001); // Ensure it's above other UI elements
+    this.relicDisplay.add(nameText);
+    
+    // Create relic description text (positioned relative to container)
+    const descText = this.scene.add.text(20, 10, relicDescription, {
+      fontSize: '12px',
+      color: '#ffffff',
+      align: 'left',
+      stroke: '#000000',
+      strokeThickness: 1
+    });
+    descText.setOrigin(0, 0.5);
+    descText.setScrollFactor(0); // Fix to camera viewport
+    descText.setDepth(2001); // Ensure it's above other UI elements
+    this.relicDisplay.add(descText);
+    
+    // Show the display
+    this.relicDisplay.setVisible(true);
+    console.log("Relic display set to visible, container children:", this.relicDisplay.list.length);
+    console.log("Relic display position:", this.relicDisplay.x, this.relicDisplay.y);
+    console.log("Relic display visible:", this.relicDisplay.visible);
+    console.log("Relic display alpha:", this.relicDisplay.alpha);
+    console.log("Relic sprite position:", relicSprite.x, relicSprite.y);
+    console.log("Relic sprite visible:", relicSprite.visible);
+  }
+
+  /**
+   * Map relic ID to sprite frame number
+   */
+  private getRelicFrame(relicId: string): number {
+    const relicFrameMap: { [key: string]: number } = {
+      'jedi_robes': 0,
+      'lightsaber_crystal': 1,
+      'force_medallion': 2,
+      'blaster_mod': 3,
+      'r2d2_upgrade': 4,
+      'speed_boosters': 5,
+      'armor_plating': 6,
+      'energy_core': 7,
+      'reflex_enhancer': 8,
+      'shield_generator': 9
+    };
+    
+    return relicFrameMap[relicId] || 0; // Default to frame 0 if not found
+  }
+
+  /**
+   * Create the game timer display
+   */
+  private createGameTimer(): Phaser.GameObjects.Text {
+    const timer = this.scene.add.text(
+      this.scene.cameras.main.width / 2, // Center horizontally
+      40, // Below the experience bar
+      '00:00',
+      {
+        fontSize: '24px',
+        color: '#ffffff',
+        align: 'center',
+        stroke: '#000000',
+        strokeThickness: 3
+      }
+    );
+    
+    timer.setOrigin(0.5, 0.5);
+    timer.setScrollFactor(0); // Fix to camera viewport
+    timer.setDepth(2000); // Above other UI elements
+    
+    return timer;
+  }
+
+  /**
+   * Create the kill counter display
+   */
+  private createKillCounter(): void {
+    const screenWidth = this.scene.cameras.main.width;
+    const x = screenWidth * 0.75; // 3/4 on the right side
+    const y = 40; // Same height as timer
+
+    // Create skull sprite if texture exists
+    if (this.scene.textures.exists('skull')) {
+      this.killCounterSprite = this.scene.add.image(x - 25, y, 'skull');
+      this.killCounterSprite.setOrigin(0, 0.5);
+      this.killCounterSprite.setScrollFactor(0); // Fix to camera viewport
+      this.killCounterSprite.setDepth(2000); // Above other UI elements
+      this.killCounterSprite.setScale(2); // Scale if needed
+    }
+
+    // Create kill count text
+    this.killCounterText = this.scene.add.text(
+      x, // Position next to skull
+      y,
+      '0',
+      {
+        fontSize: '24px',
+        color: '#ffffff',
+        align: 'left',
+        stroke: '#000000',
+        strokeThickness: 3
+      }
+    );
+    
+    this.killCounterText.setOrigin(0, 0.5);
+    this.killCounterText.setScrollFactor(0); // Fix to camera viewport
+    this.killCounterText.setDepth(2000); // Above other UI elements
+  }
+
+  /**
+   * Update the kill counter display
+   */
+  public updateKillCount(count: number): void {
+    // Recreate if destroyed
+    if (!this.killCounterText || !(this.killCounterText as any).scene) {
+      this.createKillCounter();
+      // Update immediately after recreation
+      if (this.killCounterText) {
+        this.killCounterText.setText(count.toString());
+      }
+      return;
+    }
+
+    if (!this.killCounterText.active) {
+      return;
+    }
+
+    // Update text
+    this.killCounterText.setText(count.toString());
+  }
+
+  /**
+   * Update the game timer
+   */
+  public updateTimer(): void {
+    // Safeguard: recreate timer text if it was destroyed during pause UI
+    if (!this.gameTimer || !(this.gameTimer as any).scene) {
+      this.gameTimer = this.createGameTimer();
+    }
+    if (!this.gameTimer.active) {
+      return;
+    }
+    
+    const elapsedTime = this.scene.time.now - this.startTime;
+    const minutes = Math.floor(elapsedTime / 60000);
+    const seconds = Math.floor((elapsedTime % 60000) / 1000);
+    
+    const timeString = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    this.gameTimer.setText(timeString);
+  }
+
+  /**
+   * Get the current game time in milliseconds
+   */
+  public getGameTime(): number {
+    return this.scene.time.now - this.startTime;
+  }
+
+  /**
+   * Get the current game time formatted as MM:SS
+   */
+  public getFormattedTime(): string {
+    const elapsedTime = this.getGameTime();
+    const minutes = Math.floor(elapsedTime / 60000);
+    const seconds = Math.floor((elapsedTime % 60000) / 1000);
+    return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
+
+  /**
+   * Create the upgrade icons display container
+   */
+  private createUpgradeIconsDisplay(): Phaser.GameObjects.Container {
+    const container = this.scene.add.container(0, 0);
+    container.setScrollFactor(0); // Fix to camera viewport
+    container.setDepth(2000); // Above other UI elements
+    container.setVisible(true);
+    return container;
+  }
+
+  /**
+   * Update upgrade icons based on player's active upgrades
+   */
+  private updateUpgradeIcons(): void {
+    if (!this.upgradeIconsContainer) {
+      return;
+    }
+
+    // Clear existing icons
+    this.upgradeIconSprites.forEach((sprite) => {
+      if (sprite && sprite.active) {
+        sprite.destroy();
+      }
+    });
+    this.upgradeIconSprites.clear();
+    this.upgradeIconsContainer.removeAll(true);
+
+    // Position below experience bar (y=30) in left corner
+    const startX = 10; // Left padding
+    const startY = 35; // Below experience bar (30px height + 5px padding)
+    const iconSize = 32; // Icon size
+    const iconSpacing = 5; // Space between icons
+    const iconsPerRow = 6; // Icons per row before wrapping
+
+    const activeUpgrades: string[] = [];
+
+    // Check which upgrades are active
+    if (this.player.hasBlasterAbility()) {
+      activeUpgrades.push('blaster');
+    }
+    if (this.player.hasSaberAbility()) {
+      activeUpgrades.push('unlock_saber');
+    }
+    if (this.player.hasForceAbility()) {
+      activeUpgrades.push('unlock_force');
+    }
+    if (this.player.hasBB8Ability()) {
+      activeUpgrades.push('unlock_bb8');
+    }
+    if (this.player.hasR2D2Ability()) {
+      activeUpgrades.push('r2d2_droid');
+    }
+
+    // Create icons for active upgrades
+    activeUpgrades.forEach((upgradeId, index) => {
+      const iconKey = this.upgradeIconMap.get(upgradeId);
+      if (!iconKey || !this.scene.textures.exists(iconKey)) {
+        return; // Skip if icon doesn't exist
+      }
+
+      // Calculate position (grid layout)
+      const row = Math.floor(index / iconsPerRow);
+      const col = index % iconsPerRow;
+      const x = startX + col * (iconSize + iconSpacing);
+      const y = startY + row * (iconSize + iconSpacing);
+
+      // Create icon sprite
+      const iconSprite = this.scene.add.image(x, y, iconKey);
+      iconSprite.setOrigin(0, 0); // Top-left origin
+      iconSprite.setScrollFactor(0); // Fix to camera
+      iconSprite.setDepth(2001); // Above container
+      
+      // Use displaySize to ensure all icons are the same size regardless of source image size
+      iconSprite.setDisplaySize(iconSize, iconSize);
+
+      // Add to container and map
+      this.upgradeIconsContainer.add(iconSprite);
+      this.upgradeIconSprites.set(upgradeId, iconSprite);
+    });
+  }
+
+  /**
+   * Handle upgrade applied event
+   */
+  private onUpgradeApplied = (_upgradeId: string): void => {
+    this.updateUpgradeIcons();
+  };
+  
+  /**
    * Clean up resources
    */
   cleanup(): void {
     // Remove event listeners
     this.scene.events.off('player-level-up', this.onPlayerLevelUp, this);
+    this.scene.events.off('upgrade-applied', this.onUpgradeApplied, this);
+    
+    // Clean up upgrade icons
+    this.upgradeIconSprites.forEach((sprite) => {
+      if (sprite && sprite.active) {
+        sprite.destroy();
+      }
+    });
+    this.upgradeIconSprites.clear();
     
     // Remove any dynamic text
     const expText = this.scene.children.getByName('exp-text');

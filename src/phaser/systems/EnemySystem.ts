@@ -14,7 +14,8 @@ export class EnemySystem {
   private target: Phaser.Physics.Arcade.Sprite;
   private player: Player;
   private experienceSystem: ExperienceSystem | null = null;
-  private enemyTypes = ['dune'];
+  private gameStartTime: number = 0;
+  private lastSpawnRateUpdate: number = 0;
 
   // Tracking active enemies for improved performance
   private activeEnemies: Set<Phaser.Physics.Arcade.Sprite> = new Set();
@@ -26,6 +27,7 @@ export class EnemySystem {
 
   // Health bars for enemies
   private healthBars: Map<Phaser.Physics.Arcade.Sprite, Phaser.GameObjects.Graphics> = new Map();
+  private healthBarsEnabled: boolean = true;
 
   // Buffer to avoid allocations in update loop
   private vectorBuffer = { x: 0, y: 0 };
@@ -34,6 +36,8 @@ export class EnemySystem {
     this.scene = scene;
     this.target = target;
     this.player = player;
+    this.gameStartTime = scene.time.now; // Track when game started
+    this.lastSpawnRateUpdate = scene.time.now; // Track last spawn rate update
 
     // Initialize enemy group with preallocated pool
     this.enemies = this.createEnemyGroup();
@@ -86,7 +90,7 @@ export class EnemySystem {
   }
 
   public static setupEnemyAnimations(scene: Phaser.Scene) {
-    console.log("Setting up enemy animations");
+    //console.log("Setting up enemy animations");
     scene.anims.create({
       key: 'storm',
       frames: scene.anims.generateFrameNumbers('storm', { start: 0, end: 2 }),
@@ -100,6 +104,7 @@ export class EnemySystem {
       frameRate: 8,
       repeat: -1
     });
+
 
 
   }
@@ -139,22 +144,37 @@ export class EnemySystem {
 
 
   /**
-   * Calculate spawn interval based on player level
-   * Enemies spawn faster as player level increases
+   * Calculate spawn interval based on player level and elapsed time
+   * Enemies spawn faster as player level increases and time passes
    */
   private calculateSpawnInterval(): number {
     const baseInterval = GAME_CONFIG.ENEMY.SPAWN_INTERVAL;
     const playerLevel = this.player.getLevel();
 
-    // Reduce spawn interval by 15% per level (minimum 30% of base interval)
-    const reductionFactor = Math.max(0.3, 1 - (playerLevel - 1) * 0.25);
+    // Level-based reduction: 25% per level (minimum 30% of base interval)
+    const levelReductionFactor = Math.max(
+      GAME_CONFIG.ENEMY.LEVEL_SCALING.MIN_REDUCTION_FACTOR,
+      1 - (playerLevel - 1) * GAME_CONFIG.ENEMY.LEVEL_SCALING.REDUCTION_PER_LEVEL
+    );
 
-    return Math.floor(baseInterval * reductionFactor);
+    // Time-based reduction: 5% per minute (maximum 50% reduction)
+    const elapsedTime = this.scene.time.now - this.gameStartTime;
+    const minutesElapsed = Math.floor(elapsedTime / 60000);
+    const timeReduction = Math.min(
+      minutesElapsed * GAME_CONFIG.ENEMY.TIME_SCALING.REDUCTION_PER_MINUTE,
+      GAME_CONFIG.ENEMY.TIME_SCALING.MAX_REDUCTION
+    );
+    const timeReductionFactor = 1 - timeReduction;
+
+    // Combine both reductions (multiply factors)
+    const totalReductionFactor = levelReductionFactor * timeReductionFactor;
+
+    return Math.floor(baseInterval * totalReductionFactor);
   }
 
   /**
-   * Update spawn timer when player levels up
-   * Should be called when player level changes
+   * Update spawn timer when player levels up or time passes
+   * Should be called when player level changes or periodically for time-based scaling
    */
   updateSpawnRate(): void {
     // Destroy existing timer
@@ -164,9 +184,10 @@ export class EnemySystem {
 
     // Create new timer with updated interval
     this.spawnTimer = this.startSpawnTimer();
-    //this.startSpawnTfighterTimer();
 
-    console.log(`Enemy spawn rate updated: ${this.calculateSpawnInterval()}ms (Player Level: ${this.player.getLevel()})`);
+    const elapsedTime = this.scene.time.now - this.gameStartTime;
+    const minutesElapsed = Math.floor(elapsedTime / 60000);
+    console.log(`Enemy spawn rate updated: ${this.calculateSpawnInterval()}ms (Player Level: ${this.player.getLevel()}, Time: ${minutesElapsed}m)`);
   }
 
 
@@ -199,6 +220,23 @@ export class EnemySystem {
   }
 
   /**
+   * Get available enemy types based on player level
+   */
+  private getAvailableEnemyTypes(): string[] {
+    const playerLevel = this.player.getLevel();
+    const availableTypes: string[] = [];
+
+    // Check each enemy type against unlock level
+    for (const [type, unlockLevel] of Object.entries(GAME_CONFIG.ENEMY.TYPE_UNLOCKS)) {
+      if (playerLevel >= unlockLevel) {
+        availableTypes.push(type);
+      }
+    }
+
+    return availableTypes;
+  }
+
+  /**
    * Spawn a new enemy at a random edge position
    */
   private spawnEnemy(): void {
@@ -207,21 +245,16 @@ export class EnemySystem {
       return;
     }
 
-    let type = "dune"; // Default enemy type
-
-    if (this.player.getLevel() > 1)
-      this.enemyTypes.push("storm");
-      this.enemyTypes.push("dune");
-
-    if (this.player.getLevel() > 2)
-      this.enemyTypes.push("soldier1");
-
+    // Get available enemy types based on player level
+    const availableTypes = this.getAvailableEnemyTypes();
     
-    type = Phaser.Utils.Array.GetRandom(this.enemyTypes);
-    
-    if(GAME_CONFIG.DEBUG) {
-      console.log("Spawning enemy of type: " + type);
+    if (availableTypes.length === 0) {
+      // Fallback to dune if no types are available
+      availableTypes.push('dune');
     }
+
+    // Pick a random type from available types
+    const type = Phaser.Utils.Array.GetRandom(availableTypes);
 
     this.spawnZones = this.createSpawnZones()
 
@@ -252,16 +285,11 @@ export class EnemySystem {
     // Reset any enemy state that needs resetting
     //enemy.setTint(GAME_CONFIG.ENEMY.TINT);
 
-    // Reset health to max
-    (enemy as any).health = GAME_CONFIG.ENEMY.MAX_HEALTH;
-
-    if (type == "soldier1") {
-      (enemy as any).health = GAME_CONFIG.ENEMY.MAX_HEALTH * 1.2;
-    }
-
-    if (type == "dune") {
-      (enemy as any).health = GAME_CONFIG.ENEMY.MAX_HEALTH * .75;
-    }
+    // Health from config per-type (defaults to 1.0 multiplier)
+    const mult = (GAME_CONFIG.ENEMY.TYPES as any)?.[type]?.HEALTH_MULTIPLIER ?? 1.0;
+    const hp = GAME_CONFIG.ENEMY.MAX_HEALTH * mult;
+    (enemy as any).health = hp;
+    (enemy as any).maxHealth = hp;
 
 
     enemy.setTexture(type);
@@ -317,8 +345,9 @@ export class EnemySystem {
     enemy.setScale(GAME_CONFIG.ENEMY.SCALE);
     enemy.setDepth(GAME_CONFIG.ENEMY.DEPTH);
     //enemy.setCollideWorldBounds(true);
-    // Initialize health property
+    // Initialize health properties
     (enemy as any).health = GAME_CONFIG.ENEMY.MAX_HEALTH;
+    (enemy as any).maxHealth = (enemy as any).health;
 
     if (enemy.body) {
 
@@ -340,6 +369,17 @@ export class EnemySystem {
    * Update all active enemies - optimized for large quantities
    */
   update(_time: number, _delta: number): void {
+    // Periodically update spawn rate based on elapsed time (check every minute)
+    const currentTime = this.scene.time.now;
+    const previousMinute = Math.floor((this.lastSpawnRateUpdate - this.gameStartTime) / 60000);
+    const currentMinute = Math.floor((currentTime - this.gameStartTime) / 60000);
+    
+    // Update spawn rate if we've crossed a minute boundary
+    if (currentMinute > previousMinute) {
+      this.updateSpawnRate();
+      this.lastSpawnRateUpdate = currentTime;
+    }
+
     // Update camera rectangle for visibility checks
     const camera = this.scene.cameras.main;
     if (camera) {
@@ -398,7 +438,7 @@ export class EnemySystem {
           this.offscreenTimers.set(enemy, newElapsed);
 
           if (newElapsed > 50) {
-            console.log("ENEMY OFF SCREEN AND DEACTIVATING")
+            //console.log("ENEMY OFF SCREEN AND DEACTIVATING")
             this.deactivateEnemy(enemy);
             this.offscreenTimers.delete(enemy);
             this.activeEnemies.delete(enemy);
@@ -499,11 +539,16 @@ export class EnemySystem {
     if (!enemy.active) return false;
 
     (enemy as any).health -= damage;
-    this.updateHealthBar(enemy);
+    
+    // Only update health bar if enabled
+    if (this.healthBarsEnabled) {
+      this.updateHealthBar(enemy);
+    }
 
     if ((enemy as any).health <= 0) {
       this.showDamageNumber(this.scene, enemy.x, enemy.y - 10, damage, isCritical);
       this.dropExperienceOrb(enemy);
+      this.dropRelic(enemy);
       this.deactivateEnemy(enemy);
 
       return true;
@@ -556,32 +601,37 @@ export class EnemySystem {
     // Skip if no experience system is set
     if (!this.experienceSystem) return;
 
-    // Check drop chance
-    //if (Math.random() <= GAME_CONFIG.ENEMY.EXPERIENCE_DROP_CHANCE) {
-    // Spawn experience orb at enemy position
-    this.experienceSystem.spawnOrb(enemy.x, enemy.y);
+    // Spawn multiple orbs with small spread so they don't stack
+    const numOrbs = 5;
+    for (let i = 0; i < numOrbs; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 6 + Math.random() * 18; // 6..24px
+      const ox = Math.cos(angle) * radius;
+      const oy = Math.sin(angle) * radius;
+      this.experienceSystem.spawnOrb(enemy.x + ox, enemy.y + oy);
+    }
     // Add a small visual effect
     this.createDeathEffect(enemy.x, enemy.y);
 
   }
 
   /**
+   * Drop a relic at the enemy's position (rare chance)
+   */
+  public dropRelic(enemy: Phaser.Physics.Arcade.Sprite): void {
+    // Configurable chance to drop a relic from regular enemies
+    if (Math.random() < GAME_CONFIG.ENEMY.RELIC_DROP_CHANCE) {
+      //console.log("Regular enemy dropping relic at:", enemy.x, enemy.y);
+      this.scene.events.emit('relic-dropped', enemy.x, enemy.y);
+    }
+  }
+
+  /**
    * Create a visual effect when an enemy is defeated
    */
   private createDeathEffect(x: number, y: number): void {
-    // Create particles for death effect
-    const particles = this.scene.add.particles(x, y, GAME_CONFIG.EXPERIENCE_ORB.KEY, {
-      speed: { min: 50, max: 100 },
-      scale: { start: 0.2, end: 0 },
-      quantity: 5,
-      lifespan: 500,
-      tint: 0xFFD700
-    });
-
-    // Auto-destroy after animation completes
-    this.scene.time.delayedCall(500, () => {
-      particles.destroy();
-    });
+    // Emit event for particle effects system to handle
+    this.scene.events.emit('enemy-death', x, y, 'stormtrooper');
   }
 
   /**
@@ -615,7 +665,7 @@ export class EnemySystem {
 
     // Get current health percentage
     const health = (enemy as any).health || 0;
-    const maxHealth = GAME_CONFIG.ENEMY.MAX_HEALTH;
+    const maxHealth = (enemy as any).maxHealth || GAME_CONFIG.ENEMY.MAX_HEALTH;
     const healthPercent = Math.max(0, Math.min(1, health / maxHealth));
 
     // Set health bar dimensions
@@ -700,5 +750,40 @@ export class EnemySystem {
    */
   setTarget(target: Phaser.Physics.Arcade.Sprite): void {
     this.target = target;
+  }
+
+  /**
+   * Apply stress test configuration
+   */
+  setStressTestConfig(config: {
+    spawnInterval: number;
+    maxCount: number;
+    healthBarsEnabled: boolean;
+  }): void {
+    // Update spawn timer
+    if (this.spawnTimer) {
+      this.spawnTimer.destroy();
+    }
+    this.spawnTimer = this.scene.time.addEvent({
+      delay: config.spawnInterval,
+      callback: this.spawnEnemy,
+      callbackScope: this,
+      loop: true
+    });
+
+    // Update max count (resize group if needed)
+    if (config.maxCount > this.enemies.maxSize) {
+      this.enemies.maxSize = config.maxCount;
+    }
+
+    // Store health bars setting for use in damageEnemy
+    this.healthBarsEnabled = config.healthBarsEnabled;
+  }
+
+  /**
+   * Get total enemy count including inactive
+   */
+  getTotalEnemyCount(): number {
+    return this.enemies.children.size;
   }
 } 

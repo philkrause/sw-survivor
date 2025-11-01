@@ -37,11 +37,13 @@ export class TfighterSystem {
     // Initialize enemy group with preallocated pool
     this.enemies = this.createEnemyGroup();
 
-    // create collisions between enemies
-    this.scene.physics.add.collider(this.enemies, this.enemies);
+    // T-fighters don't collide with each other (removed collision)
 
     // Pre-populate the object pool to avoid runtime allocations
     this.prepopulateEnemyPool();
+
+    // Ensure all enemies are properly deactivated initially
+    this.deactivateAllEnemies();
 
     // Set up spawn timer
     this.spawnTimer = this.startSpawnTimer();
@@ -182,8 +184,12 @@ export class TfighterSystem {
       return;
     }
 
-    let type = "tfighter"; // Default enemy type
+    // Don't spawn T-fighters until player reaches minimum level
+    if (this.player.getLevel() < GAME_CONFIG.TFIGHTER.MIN_LEVEL) {
+      return;
+    }
 
+    let type = "tfighter"; // Default enemy type
 
     const spawnZones = this.createSpawnZones()
 
@@ -191,10 +197,9 @@ export class TfighterSystem {
     const { x, y } = Phaser.Utils.Array.GetRandom(spawnZones);
 
     // Get an inactive enemy from the pool
-    const enemy = this.enemies.get(x, y, type) as Phaser.Physics.Arcade.Sprite;
+    const enemy = this.enemies.get() as Phaser.Physics.Arcade.Sprite;
 
-
-    if (enemy && this.player. getLevel() > 1) {
+    if (enemy) {
       this.activateEnemy(enemy, x, y, type);
     }
   }
@@ -215,8 +220,9 @@ export class TfighterSystem {
     if (enemy.body)
       enemy.body.enable = true;// Activate the physics body
 
-    // Reset health to max
+    // Reset health to max and track per-enemy maxHealth for correct bar scaling
     (enemy as any).health = GAME_CONFIG.ENEMY.MAX_HEALTH;
+    (enemy as any).maxHealth = (enemy as any).health;
 
     enemy.setTexture(type);
     
@@ -261,6 +267,17 @@ export class TfighterSystem {
   }
 
   /**
+   * Deactivate all enemies in the pool
+   */
+  private deactivateAllEnemies(): void {
+    const enemies = this.enemies.getChildren();
+    for (let i = 0; i < enemies.length; i++) {
+      const enemy = enemies[i] as Phaser.Physics.Arcade.Sprite;
+      this.deactivateEnemy(enemy);
+    }
+  }
+
+  /**
    * Configure an enemy sprite with appropriate properties
    * Only needs to be done once when enemy is first created
    */
@@ -268,6 +285,7 @@ export class TfighterSystem {
     const scale = 0.1;
     enemy.setDepth(GAME_CONFIG.TFIGHTER.DEPTH);
     (enemy as any).health = GAME_CONFIG.TFIGHTER.MAX_HEALTH;
+    (enemy as any).maxHealth = (enemy as any).health;
 
     // Resize collider box here
     if (enemy.body) {
@@ -377,6 +395,7 @@ export class TfighterSystem {
     if ((enemy as any).health <= 0) {
       this.showDamageNumber(this.scene, enemy.x, enemy.y - 10, damage, isCritical);
       this.dropExperienceOrb(enemy);
+      this.dropRelic(enemy);
       this.deactivateEnemy(enemy);
 
       return true;
@@ -422,32 +441,37 @@ export class TfighterSystem {
     // Skip if no experience system is set
     if (!this.experienceSystem) return;
 
-    // Check drop chance
-    //if (Math.random() <= GAME_CONFIG.TFIGHTER.EXPERIENCE_DROP_CHANCE) {
-    // Spawn experience orb at enemy position
-    this.experienceSystem.spawnOrb(enemy.x, enemy.y);
+    // Spawn multiple orbs with small spread so they don't stack
+    const numOrbs = 5;
+    for (let i = 0; i < numOrbs; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const radius = 6 + Math.random() * 18; // 6..24px
+      const ox = Math.cos(angle) * radius;
+      const oy = Math.sin(angle) * radius;
+      this.experienceSystem.spawnOrb(enemy.x + ox, enemy.y + oy);
+    }
     // Add a small visual effect
     this.createDeathEffect(enemy.x, enemy.y);
 
   }
 
   /**
+   * Drop a relic at the enemy's position (higher chance for T-fighters)
+   */
+  public dropRelic(enemy: Phaser.Physics.Arcade.Sprite): void {
+    // Configurable chance to drop a relic from T-fighters
+    if (Math.random() < GAME_CONFIG.TFIGHTER.RELIC_DROP_CHANCE) {
+      //console.log("T-fighter dropping relic at:", enemy.x, enemy.y);
+      this.scene.events.emit('relic-dropped', enemy.x, enemy.y);
+    }
+  }
+
+  /**
    * Create a visual effect when an enemy is defeated
    */
   private createDeathEffect(x: number, y: number): void {
-    // Create particles for death effect
-    const particles = this.scene.add.particles(x, y, GAME_CONFIG.EXPERIENCE_ORB.KEY, {
-      speed: { min: 50, max: 100 },
-      scale: { start: 0.2, end: 0 },
-      quantity: 5,
-      lifespan: 500,
-      tint: 0xFFD700
-    });
-
-    // Auto-destroy after animation completes
-    this.scene.time.delayedCall(500, () => {
-      particles.destroy();
-    });
+    // Emit event for particle effects system to handle
+    this.scene.events.emit('enemy-death', x, y, 'tie_fighter');
   }
 
   /**
@@ -479,8 +503,8 @@ export class TfighterSystem {
     healthBar.clear();
 
     // Get current health percentage
-    const health = (enemy as any).health || 50;
-    const maxHealth = GAME_CONFIG.TFIGHTER.MAX_HEALTH;
+    const health = (enemy as any).health || GAME_CONFIG.TFIGHTER.MAX_HEALTH;
+    const maxHealth = (enemy as any).maxHealth || GAME_CONFIG.TFIGHTER.MAX_HEALTH;
     const healthPercent = Math.max(0, Math.min(1, health / maxHealth));
 
     // Set health bar dimensions
@@ -636,5 +660,43 @@ export class TfighterSystem {
    */
   setTarget(target: Phaser.Physics.Arcade.Sprite): void {
     this.target = target;
+  }
+
+  /**
+   * Apply stress test configuration
+   */
+  setStressTestConfig(config: {
+    spawnInterval: number;
+    maxCount: number;
+  }): void {
+    // Update spawn timer
+    if (this.spawnTimer) {
+      this.spawnTimer.destroy();
+    }
+    this.spawnTimer = this.scene.time.addEvent({
+      delay: config.spawnInterval,
+      callback: this.spawnEnemy,
+      callbackScope: this,
+      loop: true
+    });
+
+    // Update max count (resize group if needed)
+    if (config.maxCount > this.enemies.maxSize) {
+      this.enemies.maxSize = config.maxCount;
+    }
+  }
+
+  /**
+   * Get current T-fighter count
+   */
+  getEnemyCount(): number {
+    return this.activeEnemies.size;
+  }
+
+  /**
+   * Get total T-fighter count including inactive
+   */
+  getTotalEnemyCount(): number {
+    return this.enemies.children.size;
   }
 } 

@@ -1,9 +1,12 @@
 import Phaser from 'phaser';
 import MainScene from './MainScene';
+import { OptionsMenu } from '../ui/OptionsMenu';
 
 
 export default class StartScene extends Phaser.Scene {
   private music!: Phaser.Sound.BaseSound;
+  private optionsMenu!: OptionsMenu;
+  private isShowingOptions: boolean = false;
 
   constructor() {
     super({ key: 'StartScene' });
@@ -11,19 +14,28 @@ export default class StartScene extends Phaser.Scene {
   }
 
   preload() {
-    console.log('📦 preload StartScene');
+    //console.log('📦 preload StartScene');
     this.load.image('starfield', '../../../assets/images/game/startmenu_back.png');
     this.load.image('darthback', '../../../assets/images/game/darth_back.png');
   }
 
   create() {
+    // Initialize global volume to 0 (muted) at start - this ensures all sounds respect the default muted state
+    this.sound.volume = 0;
+
     this.sound.stopAll();
 
     if (this.music) {
       this.music.stop();
     }
 
-    console.log('🎬 create StartScene');
+    // Initialize options menu
+    this.optionsMenu = new OptionsMenu(this, {
+      onVolumeChange: (volume: number) => this.setMusicVolume(volume),
+      onClose: () => this.closeOptions()
+    });
+
+    //console.log('🎬 create StartScene');
 
     const darthimage = this.add.image(this.scale.width/8, 0, 'darthback')
       .setOrigin(0) 
@@ -43,7 +55,7 @@ export default class StartScene extends Phaser.Scene {
     // Yellow Star Wars text
     // Wait for StarJedi font to fully load before adding text
     document.fonts.load('64px StarJedi').then(() => {
-      console.log('✅ StarJedi font ready');
+      //console.log('✅ StarJedi font ready');
 
       this.add.text(this.scale.width / 2, 100, 'star wars', {
         fontFamily: 'StarJedi',
@@ -65,50 +77,78 @@ export default class StartScene extends Phaser.Scene {
 
 
       // Start Button
-      const startButton = this.add.text(this.scale.width / 2, 500, 'START', {
+      const startButton = this.add.text(this.scale.width / 2, 500, 'start', {
         fontFamily: 'StarJedi',
         fontSize: '64px',
-        color: '#ffff00',
+        color: '#ffffff',
         stroke: '#000',
         strokeThickness: 8,
         align: 'center'
       }).setOrigin(0.5).setDepth(2).setInteractive({ useHandCursor: true });
 
-      // const optionsButton = this.add.text(this.scale.width / 2, 600, 'options', {
-      //   fontFamily: 'StarJedi',
-      //   fontSize: '64px',
-      //   color: '#ffff00',
-      //   stroke: '#000',
-      //   strokeThickness: 8,
-      //   align: 'center'
-      // }).setOrigin(0.5).setDepth(2).setInteractive({ useHandCursor: true });
+      // Options Button
+      const optionsButton = this.add.text(this.scale.width / 2, 600, 'options', {
+        fontFamily: 'StarJedi',
+        fontSize: '64px',
+        color: '#ffffff',
+        stroke: '#000',
+        strokeThickness: 8,
+        align: 'center'
+      }).setOrigin(0.5).setDepth(2).setInteractive({ useHandCursor: true });
 
 
       startButton.on('pointerdown', () => {
         this.scene.stop('StartScene');
         this.scene.remove('MainScene');
         this.scene.add('MainScene', MainScene, true); // auto-start it
-
       });
 
-      // optionsButton.on('pointerdown', () => {
-      //   this.scene.stop('StartScene');
-      //   this.scene.remove('MainScene');
-      //   this.scene.add('MainScene', MainScene, true); // auto-start it
+      optionsButton.on('pointerdown', () => {
+        this.showOptions();
+      });
 
-      // });
-
-
-
-      // Hover effect
-      startButton.on('pointerover', () => startButton.setStyle({ backgroundColor: '#444' }));
-      startButton.on('pointerout', () => startButton.setStyle({ backgroundColor: '' }));
-      //optionsButton.on('pointerover', () => optionsButton.setStyle({ backgroundColor: '#444' }));
-      //optionsButton.on('pointerout', () => optionsButton.setStyle({ backgroundColor: '' }));
+      // Hover effects: white default, yellow highlight
+      startButton.on('pointerover', () => startButton.setStyle({ color: '#ffff00' }));
+      startButton.on('pointerout', () => startButton.setStyle({ color: '#ffffff' }));
+      optionsButton.on('pointerover', () => optionsButton.setStyle({ color: '#ffff00' }));
+      optionsButton.on('pointerout', () => optionsButton.setStyle({ color: '#ffffff' }));
     });
 
   }
 
+  /**
+   * Show options menu
+   */
+  private showOptions(): void {
+    this.isShowingOptions = true;
+    this.optionsMenu.show();
+  }
 
+  /**
+   * Close options menu
+   */
+  private closeOptions(): void {
+    this.isShowingOptions = false;
+    this.optionsMenu.hide();
+  }
 
+  /**
+   * Set music volume
+   */
+  private setMusicVolume(volume: number): void {
+    if (this.music) {
+      (this.music as Phaser.Sound.WebAudioSound).setVolume(volume);
+    }
+    // Store volume for future music
+    this.sound.volume = volume;
+  }
+
+  /**
+   * Cleanup when scene is destroyed
+   */
+  destroy(): void {
+    if (this.optionsMenu) {
+      this.optionsMenu.cleanup();
+    }
+  }
 }

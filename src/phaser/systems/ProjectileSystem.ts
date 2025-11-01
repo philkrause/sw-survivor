@@ -23,6 +23,7 @@ export interface ProjectileConfig {
  */
 export class ProjectileSystem {
   private scene: Phaser.Scene;
+  private player: any; // Player reference for speed multiplier
   public pools: Map<string, Phaser.Physics.Arcade.Group> = new Map();
   private configs: Map<string, ProjectileConfig> = new Map();
   private vectorBuffer = new Phaser.Math.Vector2();
@@ -32,10 +33,13 @@ export class ProjectileSystem {
 
   constructor(scene: Phaser.Scene) {
     this.scene = scene;
+  }
 
-    // Get the camera's world view dimensions
-    const camera = this.scene.cameras.main;
-    console.log( `Camera dimensions: ${camera.width}x${camera.height}`);
+  /**
+   * Set the player reference for speed multiplier
+   */
+  setPlayer(player: any): void {
+    this.player = player;
   }
 
 
@@ -56,12 +60,19 @@ export class ProjectileSystem {
 
       // Make sure projectile is not null before configuring
       if (projectile) {
-        //this.configureProjectile(projectile, config);
         projectile.setActive(false);
         projectile.setVisible(false);
+        projectile.setScale(config.scale);
+        projectile.setDepth(config.depth);
 
-        if (projectile.body)
-          projectile.body.enable = false; // Disable physics body
+        if (config.tint !== undefined) {
+          projectile.setTint(config.tint);
+        }
+
+        if (projectile.body) {
+          projectile.body.enable = false; // Disable physics body initially
+          projectile.body.setSize(projectile.width, projectile.height); // Set proper body size
+        }
 
         // Store lifespan data in a custom property
         (projectile as any).lifespan = config.lifespan;
@@ -95,7 +106,8 @@ export class ProjectileSystem {
     x: number,
     y: number,
     dirX: number,
-    dirY: number
+    dirY: number,
+    projectileType: string = 'blaster'
   ): Phaser.Physics.Arcade.Sprite | null {
     const group = this.pools.get(key);
     const config = this.configs.get(key);
@@ -113,27 +125,58 @@ export class ProjectileSystem {
 
     // Reset and configure the projectile
     projectile.setActive(true).setVisible(true);
+    projectile.setPosition(x, y); // Set position
+    projectile.setTexture(config.key); // Ensure the correct texture is applied
+    projectile.setScale(config.scale);
+    projectile.setDepth(config.depth);
+    
+    // Apply tint if specified
+    if (config.tint !== undefined) {
+      projectile.setTint(config.tint);
+    }
+    
     if (projectile.body) {
       projectile.body.enable = true; // Enable physics body
       projectile.setVelocity(0, 0); // Reset velocity
+      projectile.body.setSize(projectile.width, projectile.height); // Ensure proper body size
     }
 
-    projectile.setPosition(x, y); // Set position
-    projectile.setTexture(config.key); // Ensure the correct texture is applied
-
-    // Set velocity based on direction
+    // Set velocity based on direction with player speed multiplier
     const dir = this.vectorBuffer.set(dirX, dirY).normalize();
-    projectile.setVelocity(dir.x * config.speed, dir.y * config.speed);
+    const speedMultiplier = this.player?.projectileSpeedMultiplier || 1.0;
+    const finalSpeed = config.speed * speedMultiplier;
+    projectile.setVelocity(dir.x * finalSpeed, dir.y * finalSpeed);
 
     // Set rotation if needed
     if (config.rotateToDirection) {
       projectile.setRotation(Math.atan2(dirY, dirX));
     }
 
-    // Set custom data
+    // Set custom data with damage multiplier applied
     projectile.setData('lifespan', config.lifespan);
     projectile.setData('createdAt', this.scene.time.now);
-    projectile.setData('damage', config.damage || 1);
+    
+    // Apply damage multiplier based on projectile type
+    let damageMultiplier = 1.0;
+    if (this.player) {
+      switch (projectileType) {
+        case 'blaster':
+          damageMultiplier = this.player.damageBlasterMultiplier || 1.0;
+          break;
+        case 'force':
+          damageMultiplier = this.player.forceDamageMultiplier || 1.0;
+          break;
+        case 'r2d2':
+          damageMultiplier = this.player.R2D2DamageMultiplier || 1.0;
+          break;
+        case 'saber':
+          damageMultiplier = this.player.saberDamageMultiplier || 1.0;
+          break;
+      }
+    }
+    
+    const finalDamage = (config.damage || 1) * damageMultiplier;
+    projectile.setData('damage', finalDamage);
 
     return projectile;
   }
@@ -170,11 +213,8 @@ export class ProjectileSystem {
   }
 
   deactivate(projectile: Phaser.Physics.Arcade.Sprite): void {
-    
     if (!projectile.active) {
-      console.log("projectile off screen")
       // If the projectile is already inactive, skip deactivation
-      console.warn(`Attempted to deactivate an already inactive projectile at (${projectile.x}, ${projectile.y})`);
       return;
     }
 
@@ -186,6 +226,21 @@ export class ProjectileSystem {
       projectile.setVelocity(0, 0); // Reset velocity
     }
 
+  }
+
+  /**
+   * Hard-kill a projectile on impact (disable body + hide immediately)
+   */
+  kill(projectile: Phaser.Physics.Arcade.Sprite): void {
+    // Safe path: just disable body and hide, let pool reuse the sprite
+    if ((projectile as any).disableBody) {
+      (projectile as any).disableBody(true, true);
+    }
+    projectile.setActive(false).setVisible(false);
+    if (projectile.body) {
+      projectile.body.enable = false;
+      projectile.setVelocity(0, 0);
+    }
   }
 
   getVisibleProjectiles(): Phaser.Physics.Arcade.Sprite[] {
@@ -219,5 +274,41 @@ export class ProjectileSystem {
         this.deactivate(projectile);
       }
     }
+  }
+
+  /**
+   * Apply stress test configuration
+   */
+  setStressTestConfig(config: {
+    maxCount: number;
+  }): void {
+    // Update max count for all pools
+    for (const [key, group] of this.pools) {
+      if (config.maxCount > group.maxSize) {
+        group.maxSize = config.maxCount;
+      }
+    }
+  }
+
+  /**
+   * Get total projectile count across all pools
+   */
+  getTotalProjectileCount(): number {
+    let total = 0;
+    for (const [key, group] of this.pools) {
+      total += group.children.size;
+    }
+    return total;
+  }
+
+  /**
+   * Get active projectile count across all pools
+   */
+  getActiveProjectileCount(): number {
+    let active = 0;
+    for (const [key, group] of this.pools) {
+      active += group.getTotalUsed();
+    }
+    return active;
   }
 } 

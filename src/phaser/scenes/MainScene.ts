@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { Player } from '../entities/Player';
 import { EnemySystem } from '../systems/EnemySystem';
+import { AtEnemySystem } from '../systems/AtEnemySystem';
 import { GameUI } from '../ui/GameUI';
 import { AssetManager } from '../systems/AssetManager';
 import { ProjectileSystem } from '../systems/ProjectileSystem';
@@ -9,12 +10,19 @@ import { ForceSystem } from '../systems/ForceSystem';
 import { TfighterSystem } from '../systems/TfighterSystem';
 
 import { R2D2System } from '../systems/R2D2System';
-
+import { BB8System } from '../systems/BB8System';
+import { RelicSystem } from '../systems/RelicSystem';
+import { ParticleEffects } from '../systems/ParticleEffects';
 
 import { ExperienceSystem } from '../systems/ExperienceSystem';
 import { UpgradeSystem } from '../systems/UpgradeSystem';
 import { UpgradeUI } from '../ui/UpgradeUI';
+import { PauseMenu } from '../ui/PauseMenu';
 import { GAME_CONFIG } from '../config/GameConfig';
+import { PerformanceMonitor } from '../systems/PerformanceMonitor';
+import { StressTestController } from '../systems/StressTestController';
+import { SoundManager } from '../utils/SoundManager';
+import StartScene from './StartScene';
 
 /**
  * Main game scene that coordinates all game systems and entities
@@ -24,18 +32,30 @@ export default class MainScene extends Phaser.Scene {
   private assetManager!: AssetManager;
   private player!: Player;
   private enemySystem!: EnemySystem;
+  private atEnemySystem!: AtEnemySystem;
   private projectileSystem!: ProjectileSystem;
   private tfighterSystem!: TfighterSystem;
   private forceSystem!: ForceSystem;
   private saberSystem!: SaberSystem;
   private escapeKey!: Phaser.Input.Keyboard.Key;
   private R2D2System!: R2D2System;
+  private bb8System!: BB8System;
+  private relicSystem!: RelicSystem;
+  private particleEffects!: ParticleEffects;
 
   private experienceSystem!: ExperienceSystem;
   private upgradeSystem!: UpgradeSystem;
   private gameUI!: GameUI;
   private upgradeUI!: UpgradeUI;
+  private pauseMenu!: PauseMenu;
   private background!: Phaser.GameObjects.TileSprite;
+  private soundManager!: SoundManager;
+  private enemyKillCount: number = 0; // Track total enemy kills
+  
+  // Stress testing systems
+  private performanceMonitor!: PerformanceMonitor;
+  private stressTestController!: StressTestController;
+  
   // Game state
   private isPaused: boolean = false;
 
@@ -102,10 +122,13 @@ export default class MainScene extends Phaser.Scene {
       .setScale(2); // Scale the background for zoom effect
 
 
+    // Initialize global volume to 0 (muted) at start - this ensures all sounds respect the default muted state
+    this.sound.volume = 0;
+
     // music
     this.music = this.sound.add('game', {
       loop: true,     // makes it loop
-      volume: 0.8     // optional, volume between 0–1
+      volume: 0     // Start muted
     });
 
     this.music.play();
@@ -116,7 +139,12 @@ export default class MainScene extends Phaser.Scene {
 
     this.player = new Player(this, centerX, centerY, this.projectileSystem);
     
+    // Initialize sound manager for centralized volume control
+    this.soundManager = new SoundManager(this);
+    
     this.enemySystem = new EnemySystem(this, this.player.getSprite(), this.player);
+
+    this.atEnemySystem = new AtEnemySystem(this, this.player.getSprite(), this.player);
 
     this.tfighterSystem = new TfighterSystem(this, this.player.getSprite(), this.player);
 
@@ -124,11 +152,12 @@ export default class MainScene extends Phaser.Scene {
 
     this.R2D2System = new R2D2System(this, this.enemySystem, this.tfighterSystem, this.player);
 
-    this.saberSystem = new SaberSystem(this, this.enemySystem, this.tfighterSystem, this.player );
-    
-    //this.setupProjectileCollisions();
+    this.bb8System = new BB8System(this, this.enemySystem, this.tfighterSystem, this.atEnemySystem, this.player);
 
-    this.events.on('projectile-pool-initialized', this.setupProjectileCollisions, this);
+    this.saberSystem = new SaberSystem(this, this.enemySystem, this.tfighterSystem, this.player, this.soundManager );
+    
+    // Setup projectile collisions immediately after systems are created
+    this.setupProjectileCollisions();
 
 
 
@@ -142,17 +171,9 @@ export default class MainScene extends Phaser.Scene {
     //setup animations
     Player.setupAnimations(this);
     EnemySystem.setupEnemyAnimations(this);
+    AtEnemySystem.setupAtEnemyAnimations(this);
     
-    //setup saber attacks
-    this.saberSystem.startAutoSlash(() => {
-      const playerBody = this.player.getSprite();
-
-      return {
-        x: playerBody.x,
-        y: playerBody.y,
-        facingLeft: playerBody.flipX
-      };
-    });
+    //setup saber attacks - only start if player has saber ability
     this.events.on('upgrade-saber', () => {
       const playerBody = this.player.getSprite();
 
@@ -161,6 +182,13 @@ export default class MainScene extends Phaser.Scene {
         y: playerBody.y,
         facingLeft: playerBody.flipX
       }))
+    });
+    
+    // Setup BB-8 upgrade event listener
+    this.events.on('upgrade-bb8', () => {
+      if (!this.bb8System.isActive()) {
+        this.bb8System.unlockAndActivate();
+      }
     });
     
 
@@ -172,7 +200,11 @@ export default class MainScene extends Phaser.Scene {
 
     // Connect enemy system to experience system
     this.enemySystem.setExperienceSystem(this.experienceSystem);
+    this.atEnemySystem.setExperienceSystem(this.experienceSystem);
     this.tfighterSystem.setExperienceSystem(this.experienceSystem);
+
+    // Connect AT enemy system to projectile system for shooting
+    this.atEnemySystem.setProjectileSystem(this.projectileSystem);
 
 
     // Create upgrade system
@@ -182,14 +214,78 @@ export default class MainScene extends Phaser.Scene {
     // Create game UI
     this.gameUI = new GameUI(this, this.player);
 
+    // Listen for enemy death events to track kills
+    this.events.on('enemy-death', () => {
+      this.enemyKillCount++;
+      this.gameUI.updateKillCount(this.enemyKillCount);
+    });
+
+    // Create relic system (needs GameUI reference)
+    this.relicSystem = new RelicSystem(this, this.player, this.gameUI, this.upgradeSystem);
+
+    // Initialize particle effects system
+    this.particleEffects = new ParticleEffects(this);
+
+    // Initialize stress testing systems
+    this.performanceMonitor = new PerformanceMonitor(this);
+    this.stressTestController = new StressTestController(this);
+    
+    // Set up stress test controller with system references
+    this.stressTestController.setSystemReferences(
+      this.player,
+      this.enemySystem,
+      this.atEnemySystem,
+      this.tfighterSystem,
+      this.projectileSystem,
+      this.experienceSystem,
+      this.particleEffects,
+      this.relicSystem
+    );
+
     // Create upgrade UI
     this.upgradeUI = new UpgradeUI(this, this.upgradeSystem);
+
+    // Initialize pause menu
+    this.pauseMenu = new PauseMenu(this, {
+      onResume: () => this.resumeGame(),
+      onVolumeChange: (volume: number) => this.setMusicVolume(volume),
+      onQuit: () => this.quitToMenu()
+    });
 
     // Listen for upgrade UI events
     this.events.on('show-upgrade-ui', this.showUpgradeUI, this);
 
     // Listen for player level up events to adjust enemy spawn rate
     this.events.on('player-level-up', this.onPlayerLevelUp, this);
+
+    // Listen for particle effect events
+    this.events.on('enemy-death', (x: number, y: number, enemyType: string) => {
+      this.particleEffects.createDeathEffect(x, y, enemyType);
+    });
+
+    this.events.on('projectile-hit', (x: number, y: number, isCritical: boolean) => {
+      this.particleEffects.createHitEffect(x, y, isCritical);
+    });
+
+    this.events.on('saber-hit', (x: number, y: number, isCritical: boolean) => {
+      this.particleEffects.createSaberImpact(x, y, isCritical);
+    });
+
+    this.events.on('force-push', (x: number, y: number) => {
+      this.particleEffects.createForceEffect(x, y);
+    });
+
+    this.events.on('level-up', (x: number, y: number) => {
+      this.particleEffects.createLevelUpEffect(x, y);
+    });
+
+    this.events.on('relic-collected', (x: number, y: number) => {
+      this.particleEffects.createRelicEffect(x, y);
+    });
+
+    this.events.on('damage-number', (x: number, y: number, damage: number, isCritical: boolean) => {
+      this.particleEffects.createDamageNumber(x, y, damage, isCritical);
+    });
 
     // this.events.once('player-level-5', (player: Player) => {
     // });
@@ -209,33 +305,30 @@ export default class MainScene extends Phaser.Scene {
   public setupProjectileCollisions(): void {
     // We'll use overlap instead of collider for better control
     // and only check collisions between visible enemies and player
-    console.log("Setting up projectile collisions");
-    // Basic physics collisions between enemies for minimal physics interactions
-    // this.physics.add.collider(
-    //   this.enemySystem.getEnemyGroup(),
-    //   this.enemySystem.getEnemyGroup(),
-    //   undefined,
-      // Only perform collision for visible enemies that are close to each other 
-      this.filterEnemyCollisions as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
-      this
-    // );
-
+    //console.log("Setting up projectile collisions");
+    
     // Set up projectile-enemy collisions for each projectile type
     const projectileGroup = this.projectileSystem.getProjectileGroup(GAME_CONFIG.BLASTER.PLAYER.KEY);
 
     if (projectileGroup) {
-      console.log(  "Setting up projectile-enemy collisions for blaster projectiles");
+      //console.log("Setting up projectile-enemy collisions for blaster projectiles");
+      //console.log("Projectile group size:", projectileGroup.getLength());
+      //console.log("Enemy group size:", this.enemySystem.getEnemyGroup().getLength());
+      
       this.physics.add.overlap(
         projectileGroup,
         this.enemySystem.getEnemyGroup(),
         this.handleProjectileEnemyCollision as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
         // Only check collisions for active projectiles and enemies
         (projectile, enemy) => {
-          return (projectile as Phaser.Physics.Arcade.Sprite).active &&
-            (enemy as Phaser.Physics.Arcade.Sprite).active;
+          const pActive = (projectile as Phaser.Physics.Arcade.Sprite).active;
+          const eActive = (enemy as Phaser.Physics.Arcade.Sprite).active;
+          return pActive && eActive;
         },
         this
       );  
+    } else {
+      console.error("Projectile group not found!");
     }
 
     if (projectileGroup) {
@@ -247,6 +340,45 @@ export default class MainScene extends Phaser.Scene {
         (projectile, enemy) => {
           return (projectile as Phaser.Physics.Arcade.Sprite).active &&
             (enemy as Phaser.Physics.Arcade.Sprite).active;
+        },
+        this
+      );
+    }
+
+    // AT enemy collision detection
+    if (projectileGroup) {
+      this.physics.add.overlap(
+        projectileGroup,
+        this.atEnemySystem.getEnemyGroup(),
+        this.handleProjectileAtEnemyCollision as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
+        // Only check collisions for active projectiles and enemies
+        (projectile, enemy) => {
+          return (projectile as Phaser.Physics.Arcade.Sprite).active &&
+            (enemy as Phaser.Physics.Arcade.Sprite).active;
+        },
+        this
+      );
+    }
+    
+    // Set up collisions between ground-based enemies
+    // AT enemies collide with regular enemies (both are ground-based)
+    this.physics.add.collider(
+      this.atEnemySystem.getEnemyGroup(),
+      this.enemySystem.getEnemyGroup()
+    );
+    
+    // Set up collision detection for enemy projectiles hitting player
+    const enemyProjectileGroup = this.projectileSystem.getProjectileGroup('enemy_laser');
+    if (enemyProjectileGroup) {
+      this.physics.add.overlap(
+        enemyProjectileGroup,
+        this.player.getSprite(),
+        this.handleEnemyProjectilePlayerCollision as Phaser.Types.Physics.Arcade.ArcadePhysicsCallback,
+        (player,projectile) => {
+          // Ensure both bodies are active; note: params are in the same order as overlap objs
+          const projActive = (projectile as Phaser.Physics.Arcade.Sprite).active;
+          const plyrActive = (player as Phaser.Physics.Arcade.Sprite).active;
+          return projActive && plyrActive;
         },
         this
       );
@@ -264,8 +396,13 @@ export default class MainScene extends Phaser.Scene {
     const p = projectile as Phaser.Physics.Arcade.Sprite;
     const e = enemy as Phaser.Physics.Arcade.Sprite;
 
+
     const damage: number = p.getData('damage');
     const isCritical: boolean = p.getData('critical') ?? false;
+    
+    // Emit hit effect event
+    this.events.emit('projectile-hit', e.x, e.y, isCritical);
+    
     this.enemySystem.damageEnemy(e, damage, 0, isCritical);
 
     this.projectileSystem.deactivate(p);
@@ -280,49 +417,74 @@ export default class MainScene extends Phaser.Scene {
 
     const damage: number = p.getData('damage');
     const isCritical: boolean = p.getData('critical') ?? false;
+    
+    // Emit hit effect event
+    this.events.emit('projectile-hit', e.x, e.y, isCritical);
+    
     this.tfighterSystem.damageEnemy(e, damage, 0, isCritical);
 
     this.projectileSystem.deactivate(p);
   }
 
+  /**
+   * Handle collision between projectile and AT enemy
+   */
+  private handleProjectileAtEnemyCollision(
+    projectile: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody | Phaser.Tilemaps.Tile,
+    enemy: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody | Phaser.Tilemaps.Tile
+  ): void {
+    const p = projectile as Phaser.Physics.Arcade.Sprite;
+    const e = enemy as Phaser.Physics.Arcade.Sprite;
+
+    const damage: number = p.getData('damage');
+    const isCritical: boolean = p.getData('critical') ?? false;
+    
+    // Emit hit effect event
+    this.events.emit('projectile-hit', e.x, e.y, isCritical);
+    
+    // Damage the AT enemy
+    const isDead = this.atEnemySystem.damageEnemy(e, damage, 50, isCritical);
+    
+    if (isDead) {
+      // Emit death effect event
+      this.events.emit('enemy-death', e.x, e.y, 'at_enemy');
+    }
+    
+    // Deactivate projectile
+    this.projectileSystem.deactivate(p);
+  }
 
   /**
-   * Custom filter to optimize enemy-enemy collisions
-   * Only performs collision checks when necessary
+   * Handle collision between enemy projectile and player
    */
-
-  private filterEnemyCollisions(
-    obj1: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody | Phaser.Tilemaps.Tile,
-    obj2: Phaser.Types.Physics.Arcade.GameObjectWithBody | Phaser.Physics.Arcade.Body | Phaser.Physics.Arcade.StaticBody | Phaser.Tilemaps.Tile
-  ): boolean {
-    const e1 = obj1 as Phaser.Physics.Arcade.Sprite;
-    const e2 = obj2 as Phaser.Physics.Arcade.Sprite;
-  
-    // Skip inactive enemies
-    if (!e1.active || !e2.active) return false;
-  
-    const type1 = (e1 as any).enemyType;
-    const type2 = (e2 as any).enemyType;
-
-    // Skip collisions involving tfighters
-    if (type1 === 'tfighter' || type2 === 'tfighter') return false;
-
-
-  
-    // Distance-based optimization
-    const dx = e1.x - e2.x;
-    const dy = e1.y - e2.y;
-    const distSquared = dx * dx + dy * dy;
-  
-    const collisionThreshold = 32; // Adjust as needed
-    return distSquared < (collisionThreshold * collisionThreshold);
+  private handleEnemyProjectilePlayerCollision(player: Phaser.Physics.Arcade.Sprite, projectile: Phaser.Physics.Arcade.Sprite): void {
+    // Check if projectile is still active (prevent multiple hits)
+    if (!projectile.active) {
+      return;
+    }
+    
+    // Deactivate the projectile IMMEDIATELY to prevent multiple hits
+    this.projectileSystem.deactivate(projectile);
+    
+    // Deal damage to player
+    const damage = 10; // AT enemy projectile damage
+    this.player.takeDamage(damage);
+    
+    // Emit hit effect
+    this.events.emit('projectile-hit', projectile.x, projectile.y, false);
   }
-  
+
+    
   /**
    * Check for collisions between player and enemies
    */
   private checkPlayerEnemyCollisions(...enemyGroups: Phaser.Physics.Arcade.Sprite[][]): void {
-    const playerBody = this.player.getSprite().body as Phaser.Physics.Arcade.Body;
+    const playerSprite = this.player.getSprite();
+    if (!playerSprite || !playerSprite.body) {
+      return; // Skip collision check if player sprite or body is not available
+    }
+    
+    const playerBody = playerSprite.body as Phaser.Physics.Arcade.Body;
     const playerRect = new Phaser.Geom.Rectangle(
       playerBody.x,
       playerBody.y,
@@ -358,8 +520,8 @@ export default class MainScene extends Phaser.Scene {
    * Show the upgrade UI and pause the game
    */
   private showUpgradeUI(): void {
-    // Pause the game
-    this.pauseGame();
+    // Pause the game without showing pause menu
+    this.pauseGameWithoutMenu();
 
     this.upgradeSystem.dropFallingSprites(this, "byoda", 300)
     
@@ -390,6 +552,19 @@ export default class MainScene extends Phaser.Scene {
 
     // Pause all timers
     this.time.paused = true;
+
+    // Show pause menu
+    this.pauseMenu.show();
+  }
+
+  private pauseGameWithoutMenu(): void {
+    this.isPaused = true;
+
+    // Pause physics
+    this.physics.pause();
+
+    // Pause all timers
+    this.time.paused = true;
   }
 
   /**
@@ -403,9 +578,44 @@ export default class MainScene extends Phaser.Scene {
 
     // Resume all timers
     this.time.paused = false;
+
+    // Hide pause menu
+    this.pauseMenu.hide();
+
+    // Ensure UI elements reappear
+    if (this.gameUI && (this.gameUI as any).ensureUIVisible) {
+      (this.gameUI as any).ensureUIVisible();
+      // Force a health/exp redraw using current values
+      this.gameUI.updateHealth(this.player.getHealth(), this.player.getMaxHealth());
+      this.gameUI.updateExperience(this.player.getExperience(), this.player.getExperienceToNextLevel(), this.player.getLevel());
+    }
+
+    // Ensure stress test UI reappears
+    if (this.stressTestController && (this.stressTestController as any).ensureUIVisible) {
+      (this.stressTestController as any).ensureUIVisible();
+    }
   }
 
+  /**
+   * Set music volume
+   */
+  private setMusicVolume(volume: number): void {
+    if (this.music) {
+      (this.music as Phaser.Sound.WebAudioSound).setVolume(volume);
+    }
+    // Store volume for future music
+    this.sound.volume = volume;
+  }
 
+  /**
+   * Quit to main menu
+   */
+  private quitToMenu(): void {
+    this.pauseMenu.hide();
+    this.scene.stop('MainScene');
+    this.scene.remove('StartScene');
+    this.scene.add('StartScene', StartScene, true);
+  }
 
   /**as
    * Main update loop
@@ -416,10 +626,10 @@ export default class MainScene extends Phaser.Scene {
       return;
     }
 
-    if (Phaser.Input.Keyboard.JustDown(this.escapeKey)) {
-      if (this.isPaused) {
-        this.resumeGame();
-      } else {
+    // Disable ESC while relic screen is open or while paused
+    const relicOpen = this.relicSystem && this.relicSystem.isScreenOpen && this.relicSystem.isScreenOpen();
+    if (!this.isPaused && !relicOpen) {
+      if (Phaser.Input.Keyboard.JustDown(this.escapeKey)) {
         this.pauseGame();
       }
     }
@@ -440,14 +650,18 @@ export default class MainScene extends Phaser.Scene {
     if (this.player.hasBlasterAbility())
       this.projectileSystem.update();
 
-    // Update enemy system
+    // Update enemy systems
     this.enemySystem.update(time, _delta);
-    
+    this.atEnemySystem.update();
     this.tfighterSystem.update(time, _delta);
 
 
     // Update experience system
     this.experienceSystem.update();
+
+    // Update performance monitoring
+    const totalEnemies = this.enemySystem.getEnemyCount() + this.atEnemySystem.getEnemyCount() + this.tfighterSystem.getEnemyCount();
+    this.performanceMonitor.update(totalEnemies);
 
     //Update R2D2 system
     if (this.player.hasR2D2Ability()) {
@@ -458,12 +672,24 @@ export default class MainScene extends Phaser.Scene {
       this.R2D2System.update(_delta);
     }
 
+    //Update BB-8 system
+    if (this.player.hasBB8Ability()) {
+      if (!this.bb8System.isActive()) {
+        this.bb8System.unlockAndActivate();
+      }
+
+      this.bb8System.update(time, _delta);
+    }
 
     if (this.player.hasForceAbility()) {
       this.forceSystem.update(time);
     }
+
     // Check for collisions between player and enemies
     this.checkPlayerEnemyCollisions(this.enemySystem.getVisibleEnemies());
+
+    // Check AT enemy collisions
+    this.checkPlayerEnemyCollisions(this.atEnemySystem.getVisibleEnemies());
 
     if(this.tfighterSystem)
       this.checkPlayerEnemyCollisions(this.tfighterSystem.getVisibleEnemies());
@@ -499,6 +725,9 @@ export default class MainScene extends Phaser.Scene {
       this.player.getExperienceToNextLevel(),
       this.player.getLevel()
     );
+
+    // Update game timer
+    this.gameUI.updateTimer();
   }
 
   /**
@@ -524,6 +753,30 @@ export default class MainScene extends Phaser.Scene {
     // Update enemy spawn rate based on new player level
     this.enemySystem.updateSpawnRate();
     this.tfighterSystem.updateSpawnRate();
+    this.atEnemySystem.updateSpawnRate();
+    
+    // Emit level up particle effect
+    const playerPos = this.player.getPosition();
+    this.events.emit('level-up', playerPos.x, playerPos.y);
+    
     console.log(`Player reached level ${level}! Adjusting enemy spawn rate.`);
+  }
+
+  destroy(): void {
+    // Clean up event listeners
+    this.events.off('show-upgrade-ui', this.showUpgradeUI, this);
+    
+    // Clean up stress testing systems
+    if (this.performanceMonitor) {
+      this.performanceMonitor.hide();
+    }
+    if (this.stressTestController) {
+      this.stressTestController.destroy();
+    }
+    
+    // Clean up pause menu
+    if (this.pauseMenu) {
+      this.pauseMenu.cleanup();
+    }
   }
 } 

@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { GAME_CONFIG } from '../config/GameConfig';
 import { EnemySystem } from './EnemySystem';
 import { TfighterSystem } from './TfighterSystem';
+import { SoundManager } from '../utils/SoundManager';
 
 import { Player } from '../entities/Player';
 
@@ -27,6 +28,7 @@ export class SaberSystem {
   private enemySystem: EnemySystem;
   private tfighterSystem: TfighterSystem;
   private player: Player;
+  private soundManager: SoundManager;
 
 
 
@@ -47,11 +49,12 @@ export class SaberSystem {
   };
 
 
-  constructor(scene: Phaser.Scene, enemySystem: EnemySystem, tfighterSystem: TfighterSystem, player: Player) {
+  constructor(scene: Phaser.Scene, enemySystem: EnemySystem, tfighterSystem: TfighterSystem, player: Player, soundManager: SoundManager) {
     this.scene = scene;
     this.enemySystem = enemySystem;
     this.tfighterSystem = tfighterSystem;
     this.player = player;
+    this.soundManager = soundManager;
     this.slashTimer = undefined;
   }
 
@@ -67,10 +70,10 @@ export class SaberSystem {
     getPlayerData: () => { x: number; y: number; facingLeft: boolean },
     onHit?: (hitbox: Phaser.Geom.Rectangle) => void
   ): void {
-    console.log("Star Auto Slash is called")
+    //console.log("Star Auto Slash is called")
 
     if (this.slashTimer) {
-      console.log("Slash timer destroyed")
+      //console.log("Slash timer destroyed")
       this.slashTimer.destroy();
     }
 
@@ -81,8 +84,8 @@ export class SaberSystem {
         const { x, y, facingLeft } = getPlayerData();
         const angle = facingLeft ? Math.PI : 0;
         this.slash(x, y, angle, onHit);
-            // Play sound
-        this.scene.sound.play('swing', { volume: 0.15 });
+        // Play sound using SoundManager to respect global volume
+        this.soundManager.playSound('swing', 0.15);
       }
     });
   }
@@ -136,12 +139,14 @@ export class SaberSystem {
 
     // Deal damage to each enemy using the enemySystem
     enemies.forEach((enemy) => {
-
+      // Emit saber hit effect
+      this.scene.events.emit('saber-hit', enemy.x, enemy.y, isCritical);
       this.enemySystem.damageEnemy(enemy, dmg, 0, isCritical);
     });
 
     tfighters.forEach((enemy) => {
-
+      // Emit saber hit effect
+      this.scene.events.emit('saber-hit', enemy.x, enemy.y, isCritical);
       this.tfighterSystem.damageEnemy(enemy, dmg, 0, isCritical);
     });
 
@@ -178,7 +183,7 @@ export class SaberSystem {
   private calculateSlashDamage(config: SaberSlashConfig): { damage: number; isCritical: boolean } {
     const base = config.basedamage;
     const damageMultiplier = this.player.saberDamageMultiplier;
-    const critChance = 0.2;
+    const critChance = 0.2 + this.player.saberCritChance; // Base 20% + relic bonus
     const critMultiplier = 1.5;
 
     let damage = (base) * damageMultiplier;
