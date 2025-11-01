@@ -123,8 +123,14 @@ export class AtEnemySystem {
     // Calculate spawn interval based on player level
     const spawnInterval = this.calculateSpawnInterval();
 
+    // If player hasn't reached minimum level, use a longer delay to check again
+    // This prevents wasting timer ticks when player is below level
+    const delay = this.player.getLevel() < GAME_CONFIG.AT.MIN_LEVEL 
+      ? Math.max(spawnInterval, 5000) // Check every 5 seconds if below level
+      : spawnInterval;
+
     return this.scene.time.addEvent({
-      delay: spawnInterval,
+      delay: delay,
       callback: this.spawnEnemy,
       callbackScope: this,
       loop: true
@@ -136,6 +142,8 @@ export class AtEnemySystem {
    * Should be called when player level changes
    */
   public updateSpawnRate(): void {
+    const playerLevel = this.player.getLevel();
+    
     // Destroy existing timer
     if (this.spawnTimer) {
       this.spawnTimer.destroy();
@@ -145,7 +153,16 @@ export class AtEnemySystem {
     // Create new timer with updated interval
     this.spawnTimer = this.startSpawnTimer();
 
-    console.log(`AT enemy spawn rate updated: ${this.calculateSpawnInterval()}ms (Player Level: ${this.player.getLevel()})`);
+    const spawnInterval = this.calculateSpawnInterval();
+    console.log(`AT enemy spawn rate updated: ${spawnInterval}ms (Player Level: ${playerLevel}, Min Level: ${GAME_CONFIG.AT.MIN_LEVEL})`);
+    
+    // If player just reached minimum level, force an immediate spawn check
+    if (playerLevel >= GAME_CONFIG.AT.MIN_LEVEL) {
+      // Schedule immediate spawn attempt (after a short delay to ensure timer is set up)
+      this.scene.time.delayedCall(100, () => {
+        this.spawnEnemy();
+      });
+    }
   }
 
   /**
@@ -191,13 +208,22 @@ export class AtEnemySystem {
    * Spawn a new AT enemy
    */
   private spawnEnemy(): void {
+    const playerLevel = this.player.getLevel();
+    
     // Don't spawn AT enemies until player reaches minimum level
-    if (this.player.getLevel() < GAME_CONFIG.AT.MIN_LEVEL) {
+    if (playerLevel < GAME_CONFIG.AT.MIN_LEVEL) {
       return;
     }
 
-    if (this.enemies.countActive() >= GAME_CONFIG.AT.MAX_COUNT) {
+    // Check if we've hit the max count
+    const activeCount = this.enemies.countActive();
+    if (activeCount >= GAME_CONFIG.AT.MAX_COUNT) {
       return;
+    }
+
+    // Debug log to help diagnose spawning issues
+    if (activeCount === 0) {
+      console.log(`AT enemy spawning - Level: ${playerLevel}, Active: ${activeCount}/${GAME_CONFIG.AT.MAX_COUNT}, Interval: ${this.calculateSpawnInterval()}ms`);
     }
 
     // Update spawn zones
@@ -451,6 +477,9 @@ export class AtEnemySystem {
       this.spawnTimer = this.startSpawnTimer();
       console.log('AT enemy spawn timer recreated');
     }
+    
+    // Note: updateSpawnRate() is called from MainScene when player levels up
+    // This ensures spawn timer updates when player reaches minimum level
 
     this.updateCameraRect();
     

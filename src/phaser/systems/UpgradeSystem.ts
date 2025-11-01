@@ -77,7 +77,7 @@ export class UpgradeSystem {
     // ** SABER UNLOCK **
     this.availableUpgrades.push({
       id: 'unlock_saber',
-      name: 'Awaken the Blade',
+      name: 'Lightsaber Unlock',
       description: "Unlock the legendary lightsaber weapon.",
       icon: 'saber_icon',
       level: 0,
@@ -171,7 +171,47 @@ export class UpgradeSystem {
       isAvailable: (player) => player.hasR2D2Ability()
     });
 
+    // ** BB-8 UNLOCK **
+    this.availableUpgrades.push({
+      id: 'unlock_bb8',
+      name: 'BB-88 Deploy',
+      description: "Deploy BB-88 for rolling slash attacks.",
+      icon: 'bb88_icon',
+      level: 0,
+      maxLevel: 1,
+      apply: (player) => {
+        player.unlockBB8Upgrade();
+        this.scene.events.emit('upgrade-bb8');
+      },
+      isAvailable: (player) => player.getLevel() >= GAME_CONFIG.ABILITIES.BB8_UNLOCK_LEVEL
+    });
 
+    // ** BB-8 UPGRADES **
+    this.availableUpgrades.push({
+      id: 'bb8_speed',
+      name: 'BB-8 Acceleration',
+      description: "Increase BB-8 attack speed by 15%.",
+      icon: 'speed_icon',
+      level: 0,
+      maxLevel: 5,
+      apply: (player) => {
+        player.increaseBB8Speed(0.85); // Reduces interval by 15%
+      },
+      isAvailable: (player) => player.hasBB8Ability()
+    });
+
+    this.availableUpgrades.push({
+      id: 'bb8_damage',
+      name: 'BB-8 Combat Training',
+      description: "Increase BB-8 damage by 25%.",
+      icon: 'damage_icon',
+      level: 0,
+      maxLevel: 5,
+      apply: (player) => {
+        player.increaseBB8Damage(.25);
+      },
+      isAvailable: (player) => player.hasBB8Ability()
+    });
 
     // ** BLASTER **
     this.availableUpgrades.push({
@@ -234,12 +274,12 @@ export class UpgradeSystem {
     this.availableUpgrades.push({
       id: 'movement_speed',
       name: 'Moon Boots',
-      description: 'Increase movement speed by 10%',
+      description: 'Increase movement speed by 15%',
       icon: 'movement_icon',
       level: 0,
       maxLevel: 3,
       apply: (player) => {
-        player.increaseMovementSpeed(0.1);
+        player.increaseMovementSpeed(0.15);
       },
       isAvailable: () => true // ✅ Evaluated when needed
     });
@@ -425,6 +465,9 @@ export class UpgradeSystem {
 
     // Update acquired upgrades
     this.acquiredUpgrades.set(upgradeId, currentLevel + 1);
+
+    // Emit event for UI to update upgrade icons
+    this.scene.events.emit('upgrade-applied', upgradeId);
 
     //console.log(`Applied upgrade: ${upgrade.name} (Level ${currentLevel + 1})`);
   }

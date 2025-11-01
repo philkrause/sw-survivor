@@ -19,6 +19,17 @@ export class GameUI {
   private startTime: number;
   private killCounterSprite: Phaser.GameObjects.Image | null = null;
   private killCounterText: Phaser.GameObjects.Text | null = null;
+  private upgradeIconsContainer: Phaser.GameObjects.Container;
+  private upgradeIconSprites: Map<string, Phaser.GameObjects.Image> = new Map();
+  
+  // Mapping of upgrade IDs to icon image keys
+  private upgradeIconMap: Map<string, string> = new Map([
+    ['blaster', 'blaster_icon'], // Blaster starts unlocked
+    ['unlock_saber', 'saber_icon'], // Will use saber_icon.png if loaded
+    ['unlock_force', 'spark'], // Using spark1.png
+    ['unlock_bb8', 'bb88'], // Using bb88.png
+    ['r2d2_droid', 'r2d2'], // Using r2d2.png
+  ]);
 
   constructor(scene: Phaser.Scene, player: Player) {
     this.scene = scene;
@@ -33,10 +44,16 @@ export class GameUI {
     this.relicDisplay = this.createRelicDisplay();
     this.gameTimer = this.createGameTimer();
     this.createKillCounter();
+    this.upgradeIconsContainer = this.createUpgradeIconsDisplay();
     this.startTime = this.scene.time.now;
     
     // Listen for level up events
     this.scene.events.on('player-level-up', this.onPlayerLevelUp, this);
+    // Listen for upgrade events to update icons
+    this.scene.events.on('upgrade-applied', this.onUpgradeApplied, this);
+    
+    // Initial update to show starting upgrades (like blaster)
+    this.updateUpgradeIcons();
   }
 
   /** Ensure core UI elements are visible and recreated if needed */
@@ -63,6 +80,10 @@ export class GameUI {
       if (this.killCounterSprite) {
         this.killCounterSprite.setVisible(true);
       }
+    }
+    // Ensure upgrade icons are visible
+    if (this.upgradeIconsContainer) {
+      this.upgradeIconsContainer.setVisible(true);
     }
   }
   
@@ -536,6 +557,95 @@ export class GameUI {
     const seconds = Math.floor((elapsedTime % 60000) / 1000);
     return `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
   }
+
+  /**
+   * Create the upgrade icons display container
+   */
+  private createUpgradeIconsDisplay(): Phaser.GameObjects.Container {
+    const container = this.scene.add.container(0, 0);
+    container.setScrollFactor(0); // Fix to camera viewport
+    container.setDepth(2000); // Above other UI elements
+    container.setVisible(true);
+    return container;
+  }
+
+  /**
+   * Update upgrade icons based on player's active upgrades
+   */
+  private updateUpgradeIcons(): void {
+    if (!this.upgradeIconsContainer) {
+      return;
+    }
+
+    // Clear existing icons
+    this.upgradeIconSprites.forEach((sprite) => {
+      if (sprite && sprite.active) {
+        sprite.destroy();
+      }
+    });
+    this.upgradeIconSprites.clear();
+    this.upgradeIconsContainer.removeAll(true);
+
+    // Position below experience bar (y=30) in left corner
+    const startX = 10; // Left padding
+    const startY = 35; // Below experience bar (30px height + 5px padding)
+    const iconSize = 32; // Icon size
+    const iconSpacing = 5; // Space between icons
+    const iconsPerRow = 6; // Icons per row before wrapping
+
+    const activeUpgrades: string[] = [];
+
+    // Check which upgrades are active
+    if (this.player.hasBlasterAbility()) {
+      activeUpgrades.push('blaster');
+    }
+    if (this.player.hasSaberAbility()) {
+      activeUpgrades.push('unlock_saber');
+    }
+    if (this.player.hasForceAbility()) {
+      activeUpgrades.push('unlock_force');
+    }
+    if (this.player.hasBB8Ability()) {
+      activeUpgrades.push('unlock_bb8');
+    }
+    if (this.player.hasR2D2Ability()) {
+      activeUpgrades.push('r2d2_droid');
+    }
+
+    // Create icons for active upgrades
+    activeUpgrades.forEach((upgradeId, index) => {
+      const iconKey = this.upgradeIconMap.get(upgradeId);
+      if (!iconKey || !this.scene.textures.exists(iconKey)) {
+        return; // Skip if icon doesn't exist
+      }
+
+      // Calculate position (grid layout)
+      const row = Math.floor(index / iconsPerRow);
+      const col = index % iconsPerRow;
+      const x = startX + col * (iconSize + iconSpacing);
+      const y = startY + row * (iconSize + iconSpacing);
+
+      // Create icon sprite
+      const iconSprite = this.scene.add.image(x, y, iconKey);
+      iconSprite.setOrigin(0, 0); // Top-left origin
+      iconSprite.setScrollFactor(0); // Fix to camera
+      iconSprite.setDepth(2001); // Above container
+      
+      // Use displaySize to ensure all icons are the same size regardless of source image size
+      iconSprite.setDisplaySize(iconSize, iconSize);
+
+      // Add to container and map
+      this.upgradeIconsContainer.add(iconSprite);
+      this.upgradeIconSprites.set(upgradeId, iconSprite);
+    });
+  }
+
+  /**
+   * Handle upgrade applied event
+   */
+  private onUpgradeApplied = (_upgradeId: string): void => {
+    this.updateUpgradeIcons();
+  };
   
   /**
    * Clean up resources
@@ -543,6 +653,15 @@ export class GameUI {
   cleanup(): void {
     // Remove event listeners
     this.scene.events.off('player-level-up', this.onPlayerLevelUp, this);
+    this.scene.events.off('upgrade-applied', this.onUpgradeApplied, this);
+    
+    // Clean up upgrade icons
+    this.upgradeIconSprites.forEach((sprite) => {
+      if (sprite && sprite.active) {
+        sprite.destroy();
+      }
+    });
+    this.upgradeIconSprites.clear();
     
     // Remove any dynamic text
     const expText = this.scene.children.getByName('exp-text');

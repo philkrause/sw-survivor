@@ -13,7 +13,7 @@ export class SoundManager {
 
   /**
    * Play a sound effect with a relative volume (0-1).
-   * The actual volume will be: relativeVolume * scene.sound.volume
+   * Phaser automatically multiplies this by the global volume, so we pass it directly.
    * 
    * @param key Sound key to play
    * @param relativeVolume Relative volume (0-1) - this is the desired volume if global volume is at max
@@ -24,20 +24,36 @@ export class SoundManager {
     key: string, 
     relativeVolume: number = 1.0,
     config?: Phaser.Types.Sound.SoundConfig
-  ): Phaser.Sound.BaseSound {
-    // Get the global volume from the scene's sound manager
+  ): Phaser.Sound.BaseSound | boolean {
+    // Get current global volume
     const globalVolume = this.scene.sound.volume;
     
-    // Calculate the actual volume: multiply relative volume by global volume
-    const actualVolume = Math.max(0, Math.min(1, relativeVolume * globalVolume));
+    // Calculate final volume: relative volume * global volume
+    // Phaser multiplies config volume by global volume, so we pass the relative volume
+    // and then explicitly set it to ensure it's correct
+    const finalVolume = Math.max(0, Math.min(1, relativeVolume * globalVolume));
     
-    // Merge config with calculated volume
     const soundConfig: Phaser.Types.Sound.SoundConfig = {
       ...config,
-      volume: actualVolume
+      volume: finalVolume
     };
     
-    return this.scene.sound.play(key, soundConfig);
+    const sound = this.scene.sound.play(key, soundConfig);
+    
+    // If sound is an object (not boolean), ensure volume is set correctly
+    if (sound && typeof sound === 'object' && sound !== null) {
+      try {
+        // Explicitly set volume on the sound instance to ensure it respects global volume
+        const webAudioSound = sound as any as Phaser.Sound.WebAudioSound;
+        if (webAudioSound && typeof webAudioSound.setVolume === 'function') {
+          webAudioSound.setVolume(finalVolume);
+        }
+      } catch (e) {
+        // If setVolume doesn't work, the volume from config should be sufficient
+      }
+    }
+    
+    return sound;
   }
 
   /**

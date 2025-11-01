@@ -45,6 +45,7 @@ export class Player {
 
   private hasForceUpgrade: boolean = false;
   private hasR2D2Upgrade: boolean = false;
+  private hasBB8Upgrade: boolean = false;
   public hasBlasterUpgrade: boolean = true; // Start with blaster unlocked
   private hasSaberUpgrade: boolean = false; // Saber starts locked
   
@@ -60,6 +61,8 @@ export class Player {
   private R2D2StrengthMultiplier: number = 1.0;
   public R2D2DamageMultiplier: number = 1.0;
 
+  public bb8SpeedMultiplier: number = 1.0;
+  public bb8DamageMultiplier: number = 1.0;
 
   public forceSpeedMultiplier: number = 1.0;
   private forceStrengthMultiplier: number = 1.0;
@@ -1022,6 +1025,15 @@ hasR2D2Ability(): boolean {
   return this.hasR2D2Upgrade;
 }
 
+unlockBB8Upgrade(): void {
+  this.hasBB8Upgrade = true;
+  // BB-8 upgrade unlocked
+}
+
+hasBB8Ability(): boolean {
+  return this.hasBB8Upgrade;
+}
+
 unlockSaberUpgrade(): void {
   this.hasSaberUpgrade = true;
   this.switchToSaberAnimation();
@@ -1102,6 +1114,18 @@ increaseR2D2Damage(multiplier: number): void {
   this.hasR2D2Upgrade = true;
   this.R2D2DamageMultiplier += multiplier;
   // Increased R2D2 damage
+}
+
+increaseBB8Speed(multiplier: number): void {
+  this.hasBB8Upgrade = true;
+  this.bb8SpeedMultiplier *= multiplier;
+  // Increased BB-8 speed (reduces attack interval)
+}
+
+increaseBB8Damage(multiplier: number): void {
+  this.hasBB8Upgrade = true;
+  this.bb8DamageMultiplier += multiplier;
+  // Increased BB-8 damage
 }
 
 // Get the multiplier for force strength

@@ -10,6 +10,7 @@ import { ForceSystem } from '../systems/ForceSystem';
 import { TfighterSystem } from '../systems/TfighterSystem';
 
 import { R2D2System } from '../systems/R2D2System';
+import { BB8System } from '../systems/BB8System';
 import { RelicSystem } from '../systems/RelicSystem';
 import { ParticleEffects } from '../systems/ParticleEffects';
 
@@ -38,6 +39,7 @@ export default class MainScene extends Phaser.Scene {
   private saberSystem!: SaberSystem;
   private escapeKey!: Phaser.Input.Keyboard.Key;
   private R2D2System!: R2D2System;
+  private bb8System!: BB8System;
   private relicSystem!: RelicSystem;
   private particleEffects!: ParticleEffects;
 
@@ -120,6 +122,9 @@ export default class MainScene extends Phaser.Scene {
       .setScale(2); // Scale the background for zoom effect
 
 
+    // Initialize global volume to 0 (muted) at start - this ensures all sounds respect the default muted state
+    this.sound.volume = 0;
+
     // music
     this.music = this.sound.add('game', {
       loop: true,     // makes it loop
@@ -146,6 +151,8 @@ export default class MainScene extends Phaser.Scene {
     this.forceSystem = new ForceSystem(this, this.enemySystem, this.tfighterSystem, this.player);
 
     this.R2D2System = new R2D2System(this, this.enemySystem, this.tfighterSystem, this.player);
+
+    this.bb8System = new BB8System(this, this.enemySystem, this.tfighterSystem, this.atEnemySystem, this.player);
 
     this.saberSystem = new SaberSystem(this, this.enemySystem, this.tfighterSystem, this.player, this.soundManager );
     
@@ -175,6 +182,13 @@ export default class MainScene extends Phaser.Scene {
         y: playerBody.y,
         facingLeft: playerBody.flipX
       }))
+    });
+    
+    // Setup BB-8 upgrade event listener
+    this.events.on('upgrade-bb8', () => {
+      if (!this.bb8System.isActive()) {
+        this.bb8System.unlockAndActivate();
+      }
     });
     
 
@@ -658,6 +672,14 @@ export default class MainScene extends Phaser.Scene {
       this.R2D2System.update(_delta);
     }
 
+    //Update BB-8 system
+    if (this.player.hasBB8Ability()) {
+      if (!this.bb8System.isActive()) {
+        this.bb8System.unlockAndActivate();
+      }
+
+      this.bb8System.update(time, _delta);
+    }
 
     if (this.player.hasForceAbility()) {
       this.forceSystem.update(time);

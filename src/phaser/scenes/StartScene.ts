@@ -20,6 +20,9 @@ export default class StartScene extends Phaser.Scene {
   }
 
   create() {
+    // Initialize global volume to 0 (muted) at start - this ensures all sounds respect the default muted state
+    this.sound.volume = 0;
+
     this.sound.stopAll();
 
     if (this.music) {

@@ -39,11 +39,11 @@ export const GAME_CONFIG = {
     RELIC_DROP_CHANCE: 0.03, // Chance (0-1) for relic drop on death
     // Spawn rate scaling
     LEVEL_SCALING: {
-      REDUCTION_PER_LEVEL: 0.5, // 25% reduction per level
+      REDUCTION_PER_LEVEL: 0.25, // 25% reduction per level
       MIN_REDUCTION_FACTOR: 0.3, // Minimum 30% of base interval
     },
     TIME_SCALING: {
-      REDUCTION_PER_MINUTE: 0.25, // 5% reduction per minute elapsed
+      REDUCTION_PER_MINUTE: 0.5, // 50% reduction per minute elapsed
       MAX_REDUCTION: 0.5, // Maximum 50% reduction from time alone
     },
     // Enemy type unlocks by level
@@ -79,7 +79,7 @@ export const GAME_CONFIG = {
   AT: {
     SPAWN_INTERVAL: 2000, // ms between spawns (base interval)
     MAX_COUNT: 10, // Maximum number of AT enemies at once
-    MIN_LEVEL: 10, // Minimum player level before AT enemies spawn
+    MIN_LEVEL: 2, // Minimum player level before AT enemies spawn
     RELIC_DROP_CHANCE: 0.15
   },
   EXPERIENCE_ORB: {
@@ -142,7 +142,7 @@ export const GAME_CONFIG = {
       DURATION: 600,
       SCALE: 3,
       DEPTH: 3,
-      BASEDAMAGE: 10,
+      BASEDAMAGE: 50,
       WIDTH: 50,
       HEIGHT: 50,
       TINT: 100,
@@ -154,11 +154,26 @@ export const GAME_CONFIG = {
     },
   },
 
+  BB8: {
+    SCALE: .75,
+    DEPTH: 5,
+    BASEDAMAGE: 10, // Base damage per hit
+    ROLL_SPEED: 400, // Pixels per second
+    ROLL_DISTANCE: 300, // Maximum roll distance
+    ATTACK_INTERVAL: 3000, // ms between attacks
+    HIT_RADIUS: 25, // Hit detection radius
+    FOLLOW_OFFSET: 40, // Distance to maintain from player when idle
+    LAZY_FOLLOW_SPEED: 200, // Speed for lazy follow (unused, kept for compatibility)
+    LAZY_FOLLOW_SMOOTHING: 0.08, // Lerp smoothing factor (0-1, lower = more lag/lazy)
+    IDLE_WOBBLE: 1.5, // Small wobble amplitude when idle
+  },
+
   // Ability unlock levels
   ABILITIES: {
     R2D2_UNLOCK_LEVEL: 2, // Level at which R2-D2 ability unlocks
-    FORCE_UNLOCK_LEVEL: 2, // Level at which Force ability unlocks
-    SABER_UNLOCK_LEVEL: 8, // Level at which Lightsaber ability unlocks
+    FORCE_UNLOCK_LEVEL: 7, // Level at which Force ability unlocks
+    SABER_UNLOCK_LEVEL: 10, // Level at which Lightsaber ability unlocks
+    BB8_UNLOCK_LEVEL: 5, // Level at which BB-8 ability unlocks
   },
 
   UI: {

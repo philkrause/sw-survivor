@@ -72,6 +72,8 @@ export class AssetManager {
     // ************* EXTRAS **************
     this.scene.load.image('byoda', 'assets/images/game/babyyoda.png');
     this.scene.load.image('skull', 'assets/images/game/skull.png');
+    this.scene.load.image('blaster_icon', 'assets/images/game/blaster_icon_resize.png');
+    this.scene.load.image('saber_icon', 'assets/images/game/saber_icon.png');
 
     // ************* ENEMIES **************
     this.scene.load.spritesheet('storm', 'assets/images/game/storm_walk.png', {
@@ -161,9 +163,7 @@ export class AssetManager {
     // Create movement icon (cyan boots)
     this.createIconTexture('movement_icon', 0x00ffff);
 
-    // Create saber unlock icon (blue lightsaber)
-    this.createIconTexture('saber_icon', 0x0088ff);
-
+    // NOTE: saber_icon is loaded from saber_icon.png file, not created programmatically
     // Create force unlock icon (purple force)
     this.createIconTexture('force_unlock_icon', 0xaa00ff);
 
