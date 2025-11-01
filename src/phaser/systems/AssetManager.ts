@@ -132,7 +132,7 @@ export class AssetManager {
     const backgroundScaleFactor = 2; // Adjust the scale factor for the background
 
     // Add and scale the background
-    const background = this.scene.add.image(width / 2, height / 2, 'background')
+    this.scene.add.image(width / 2, height / 2, 'background')
       .setOrigin(0.5, 0.5) // Center the background
       .setScale(backgroundScaleFactor); // Scale the background independently
 

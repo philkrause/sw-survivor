@@ -457,7 +457,7 @@ export default class MainScene extends Phaser.Scene {
   /**
    * Handle collision between enemy projectile and player
    */
-  private handleEnemyProjectilePlayerCollision(player: Phaser.Physics.Arcade.Sprite, projectile: Phaser.Physics.Arcade.Sprite): void {
+  private handleEnemyProjectilePlayerCollision(_player: Phaser.Physics.Arcade.Sprite, projectile: Phaser.Physics.Arcade.Sprite): void {
     // Check if projectile is still active (prevent multiple hits)
     if (!projectile.active) {
       return;

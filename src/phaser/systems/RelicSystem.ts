@@ -13,7 +13,6 @@ export class RelicSystem {
   private animationTimeoutId: number | null = null;
   private selectedRelicId: string | null = null;
   private isAnimationComplete: boolean = false;
-  private gameUI: GameUI;
   private spaceKey: Phaser.Input.Keyboard.Key | null = null;
   private enterKey: Phaser.Input.Keyboard.Key | null = null;
   private isStressTestMode: boolean = false;
@@ -29,10 +28,9 @@ export class RelicSystem {
   private currentChestSprite: Phaser.GameObjects.Sprite | null = null;
   private currentInstruction: Phaser.GameObjects.Text | null = null;
 
-  constructor(scene: Phaser.Scene, player: Player, gameUI: GameUI, upgradeSystem: UpgradeSystem) {
+  constructor(scene: Phaser.Scene, player: Player, _gameUI: GameUI, upgradeSystem: UpgradeSystem) {
     this.scene = scene;
     this.player = player;
-    this.gameUI = gameUI;
     this.upgradeSystem = upgradeSystem;
     this.activeRelics = this.scene.physics.add.group({
       classType: Phaser.Physics.Arcade.Sprite,
@@ -219,7 +217,7 @@ export class RelicSystem {
   /**
    * Handle relic pickup collision
    */
-  private handleRelicPickup(player: Phaser.Types.Physics.Arcade.GameObjectWithBody, chest: Phaser.Types.Physics.Arcade.GameObjectWithBody): void {
+  private handleRelicPickup(_player: Phaser.Types.Physics.Arcade.GameObjectWithBody, chest: Phaser.Types.Physics.Arcade.GameObjectWithBody): void {
     const chestSprite = chest as Phaser.Physics.Arcade.Sprite;
     this.collectRelic(chestSprite);
   }

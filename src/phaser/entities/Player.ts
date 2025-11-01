@@ -898,8 +898,8 @@ increaseBlasterSpeed(multiplier: number): void {
   this.attackTimer.destroy(); // Destroy the existing timer
 }
 
-const newInterval = this.getBlasterAttackInterval(); // Get the updated interval
-  // Blaster speed increased
+// Blaster speed increased - get the updated interval
+this.getBlasterAttackInterval(); // Get the updated interval
 
 // Recreate the attack timer with the updated interval
 this.attackTimer = this.scene.time.addEvent({
