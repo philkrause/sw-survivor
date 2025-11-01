@@ -226,8 +226,12 @@ export default class MainScene extends Phaser.Scene {
     // Initialize particle effects system
     this.particleEffects = new ParticleEffects(this);
 
-    // Initialize stress testing systems
-    this.performanceMonitor = new PerformanceMonitor(this);
+    // Initialize stress testing systems (only in debug mode)
+    if (GAME_CONFIG.DEBUG) {
+      this.performanceMonitor = new PerformanceMonitor(this);
+      this.performanceMonitor.show();
+    }
+    
     this.stressTestController = new StressTestController(this);
     
     // Set up stress test controller with system references
@@ -291,13 +295,15 @@ export default class MainScene extends Phaser.Scene {
     // });
     
 
-    // Add performance monitor
-    this.perfText = this.add.text(10, this.cameras.main.height - 30, 'FPS: 0', {
-      fontSize: '16px',
-      color: '#00ff00',
-      backgroundColor: '#000000'
-    });
-    this.perfText.setScrollFactor(0);
+    // Add performance monitor (only in debug mode)
+    if (GAME_CONFIG.DEBUG) {
+      this.perfText = this.add.text(10, this.cameras.main.height - 30, 'FPS: 0', {
+        fontSize: '16px',
+        color: '#00ff00',
+        backgroundColor: '#000000'
+      });
+      this.perfText.setScrollFactor(0);
+    }
 
 
   }
@@ -659,9 +665,11 @@ export default class MainScene extends Phaser.Scene {
     // Update experience system
     this.experienceSystem.update();
 
-    // Update performance monitoring
-    const totalEnemies = this.enemySystem.getEnemyCount() + this.atEnemySystem.getEnemyCount() + this.tfighterSystem.getEnemyCount();
-    this.performanceMonitor.update(totalEnemies);
+    // Update performance monitoring (only in debug mode)
+    if (GAME_CONFIG.DEBUG && this.performanceMonitor) {
+      const totalEnemies = this.enemySystem.getEnemyCount() + this.atEnemySystem.getEnemyCount() + this.tfighterSystem.getEnemyCount();
+      this.performanceMonitor.update(totalEnemies);
+    }
 
     //Update R2D2 system
     if (this.player.hasR2D2Ability()) {
@@ -699,7 +707,9 @@ export default class MainScene extends Phaser.Scene {
 
     // Update FPS counter every 500ms
     if (time - this.lastFpsUpdate > 500) {
-      this.updateFpsCounter();
+      if (GAME_CONFIG.DEBUG && this.perfText) {
+        this.updateFpsCounter();
+      }
       this.lastFpsUpdate = time;
     }
 
@@ -731,10 +741,12 @@ export default class MainScene extends Phaser.Scene {
   }
 
   /**
-   * Update the FPS counter
+   * Update the FPS counter (only in debug mode)
    */
   private updateFpsCounter(): void {
-    this.perfText.setText(`FPS: ${Math.round(this.game.loop.actualFps)} | Enemies: ${this.enemySystem.getEnemyCount()} | Level: ${this.player.getLevel()}`);
+    if (GAME_CONFIG.DEBUG && this.perfText) {
+      this.perfText.setText(`FPS: ${Math.round(this.game.loop.actualFps)} | Enemies: ${this.enemySystem.getEnemyCount()} | Level: ${this.player.getLevel()}`);
+    }
   }
 
   /**

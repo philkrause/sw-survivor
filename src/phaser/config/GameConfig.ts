@@ -2,7 +2,7 @@
  * Main game configuration constants
  */
 export const GAME_CONFIG = {
-  DEBUG: false,
+  DEBUG: false, // Set to true to show FPS, enemy count, and level debug info
   PLAYER: {
     SPEED: 120,
     SCALE: 2,
